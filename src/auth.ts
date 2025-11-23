@@ -1,0 +1,141 @@
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
+
+type PrismaUser = {
+  userId: bigint;
+  username: string;
+  email: string;
+  password: string;
+  roleId: number;
+  fullName: string | null;
+  isAdmin: number;
+};
+
+export const {
+  handlers: { GET, POST },
+  auth,
+  signIn,
+  signOut,
+} = NextAuth({
+  trustHost: true,
+  secret: process.env.NEXTAUTH_SECRET || 'your-secret-key-here',
+  session: { 
+    strategy: "jwt",
+    maxAge: 24 * 60 * 60, // 24 hours (1 day) in seconds
+    updateAge: 60 * 60, // 1 hour in seconds - update session every hour if active
+  },
+  pages: {
+    signIn: '/login',
+  },
+  // Increase rate limiting for development
+  ...(process.env.NODE_ENV === 'development' && {
+    experimental: {
+      // Disable rate limiting in development
+      enableWebAuthn: false,
+    },
+  }),
+  providers: [
+    Credentials({
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      authorize: async (creds) => {
+        const email = (creds?.email || "").toString();
+        const password = (creds?.password || "").toString();
+
+        if (!email || !password) return null;
+
+        // Check for Super Admin
+        if (
+          process.env.ADMIN_EMAIL &&
+          process.env.ADMIN_PASSWORD &&
+          email === process.env.ADMIN_EMAIL &&
+          password === process.env.ADMIN_PASSWORD
+        ) {
+          return {
+            id: "0",
+            name: "Super Admin",
+            email,
+            isAdmin: true,
+            roleId: 0,
+          } as any;
+        }
+
+        // Check for Guest user
+        if (
+          process.env.GUEST_EMAIL &&
+          process.env.GUEST_PASSWORD &&
+          email === process.env.GUEST_EMAIL &&
+          password === process.env.GUEST_PASSWORD
+        ) {
+          return {
+            id: "-1",
+            name: "Guest User",
+            email,
+            isAdmin: false,
+            roleId: -1, // Guest role ID
+            isGuest: true,
+          } as any;
+        }
+
+        try {
+          // Use Prisma to find user
+          const user = await prisma.user.findFirst({
+            where: {
+              email: {
+                equals: email,
+                mode: 'insensitive', // Case-insensitive search
+              },
+            },
+          });
+
+          if (!user) return null;
+
+          const ok = await bcrypt.compare(password, user.password);
+          if (!ok) return null;
+
+          return {
+            id: String(user.userId),
+            name: user.username,
+            email: user.email,
+            isAdmin: user.roleId === 211 || user.isAdmin === 1, // superadmin role id or isAdmin flag
+            roleId: user.roleId,
+          } as any;
+        } catch (error) {
+          console.error('Error in authorize:', error);
+          return null;
+        }
+      },
+    }),
+  ],
+  jwt: {
+    maxAge: 24 * 60 * 60, // 24 hours (1 day) in seconds
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = (user as any).id;
+        token.isAdmin = (user as any).isAdmin ?? false;
+        token.roleId = (user as any).roleId ?? 0;
+        token.isGuest = (user as any).isGuest ?? false;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      session.user = {
+        id: String((token as any).id ?? ""),
+        name: session.user?.name || "",
+        email: session.user?.email || "",
+        isAdmin: Boolean((token as any).isAdmin),
+        roleId: Number((token as any).roleId ?? 0),
+        isGuest: Boolean((token as any).isGuest),
+      } as any;
+      return session;
+    },
+  },
+});
+
+export { GET as GETAuth, POST as POSTAuth };

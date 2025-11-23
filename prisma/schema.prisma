@@ -1,0 +1,249 @@
+// Prisma Schema for Clinic App - PostgreSQL
+// Converted from Oracle Database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// جدول الأدوار (Roles)
+// Note: Role IDs are fixed (211, 212, etc.) and not auto-generated
+model Role {
+  roleId        Int       @id @map("role_id")
+  name          String    @unique @db.VarChar(50)
+  description   String?   @db.VarChar(255)
+  isActive      Int       @default(1) @map("is_active") // 1 = active, 0 = inactive
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  users            User[]            @relation("UserRole")
+  rolePermissions  RolePermission[]
+
+  @@map("roles")
+}
+
+// جدول المستخدمين (Users)
+model User {
+  userId      BigInt    @id @default(0) @map("user_id")
+  username    String    @unique @db.VarChar(100)
+  email       String    @unique @db.VarChar(255)
+  password    String    @db.VarChar(255)
+  roleId      Int       @map("role_id")
+  fullName    String?   @map("full_name") @db.VarChar(200)
+  isAdmin     Int       @default(0) @map("is_admin")
+  phone       String?   @db.VarChar(20)
+  isActive    Int       @default(1) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+
+  role        Role      @relation("UserRole", fields: [roleId], references: [roleId])
+  auditLogs   AuditLog[]
+  invoices    Invoice[] @relation("InvoiceCreator")
+
+  @@map("users")
+}
+
+// جدول الصلاحيات (Role Permissions)
+model RolePermission {
+  rolePermissionId BigInt    @id @default(0) @map("role_permissions_id")
+  roleId           Int       @map("role_id")
+  subject          String    @db.VarChar(50)
+  action           String    @db.VarChar(50)
+  fieldName        String?   @map("field_name") @db.VarChar(100) // NULL = general permission, value = field permission
+  canAccess        Int       @default(1) @map("can_access") // 1 = can access, 0 = cannot
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+
+  role             Role      @relation(fields: [roleId], references: [roleId], onDelete: Cascade)
+
+  @@unique([roleId, subject, action, fieldName])
+  @@map("role_permissions")
+}
+
+// جدول الأطباء (Doctors)
+model Doctor {
+  doctorId              BigInt    @id @default(0) @map("doctor_id")
+  name                 String    @db.VarChar(255)
+  email                String    @unique @db.VarChar(320)
+  phone                String    @unique @db.VarChar(20)
+  specialty            String    @db.VarChar(255)
+  experience           Int?      @db.SmallInt // 0-50
+  qualification        String?   @db.VarChar(500)
+  image                String?   @db.VarChar(500) // Image URL
+  bio                  String?   @db.VarChar(1000)
+  consultationFee      Decimal?  @default(0) @map("consultation_fee") @db.Decimal(10, 2)
+  followUpFee          Decimal?  @map("follow_up_fee") @db.Decimal(10, 0)
+  isAvailable          Int       @default(1) @map("is_available") // 1 = available, 0 = unavailable
+  availabilityUpdatedAt DateTime? @map("availability_updated_at") @db.Timestamp(6)
+
+  patients             Patient[]           @relation("PrimaryPhysician")
+  appointments         Appointment[]
+  doctorSchedules      DoctorSchedule[]
+  medicalRecords       MedicalRecord[]
+
+  @@index([isAvailable])
+  @@map("doctors")
+}
+
+// جدول المرضى (Patients)
+model Patient {
+  patientId                BigInt    @id @default(0) @map("patient_id")
+  name                     String    @db.VarChar(255)
+  email                    String    @unique @db.VarChar(320)
+  phone                    String    @unique @db.VarChar(20)
+  dateOfBirth              DateTime? @map("date_of_birth") @db.Date
+  gender                   String?   @db.VarChar(10)
+  address                  String?   @db.VarChar(500)
+  occupation               String?   @db.VarChar(255)
+  emergencyContactName     String?   @map("emergency_contact_name") @db.VarChar(255)
+  emergencyContactNumber   String?   @map("emergency_contact_number") @db.VarChar(20)
+  primaryPhysician         BigInt?   @map("primary_physician")
+  insuranceProvider        String?   @map("insurance_provider") @db.VarChar(255)
+  insurancePolicyNumber    String?   @map("insurance_policy_number") @db.VarChar(100)
+  allergies                String?   @db.VarChar(1000)
+  currentMedication        String?   @map("current_medication") @db.VarChar(1000)
+  familyMedicalHistory     String?   @map("family_medical_history") @db.VarChar(1000)
+  pastMedicalHistory       String?   @map("past_medical_history") @db.VarChar(1000)
+  identificationType       String?   @map("identification_type") @db.VarChar(50)
+  identificationNumber     String?   @map("identification_number") @db.VarChar(100)
+  identificationDocument   Bytes?    @map("identification_document") @db.ByteA
+  privacyConsent           Int       @default(0) @map("privacy_consent")
+  treatmentConsent         Int       @default(0) @map("treatment_consent")
+  disclosureConsent        Int       @default(0) @map("disclosure_consent")
+
+  primaryPhysicianRelation Doctor?          @relation("PrimaryPhysician", fields: [primaryPhysician], references: [doctorId])
+  appointments              Appointment[]
+  medicalRecords            MedicalRecord[]
+  invoices                  Invoice[]
+
+  @@map("patients")
+}
+
+// جدول المواعيد (Appointments)
+model Appointment {
+  appointmentId       BigInt    @id @default(0) @map("appointment_id")
+  patientId          BigInt    @map("patient_id")
+  doctorId           BigInt    @map("doctor_id")
+  appointmentType    String    @default("consultation") @map("appointment_type") @db.VarChar(20) // consultation, follow_up, emergency
+  schedule           DateTime  @db.Timestamp(6)
+  scheduleAt         String?   @map("schedule_at") @db.VarChar(10) // Time slot like "09:00", "10:30"
+  reason             String    @db.VarChar(500)
+  note               String?   @db.VarChar(1000)
+  status             String    @default("pending") @db.VarChar(20) // pending, scheduled, cancelled, completed
+  cancellationReason String?   @map("cancellation_reason") @db.VarChar(500)
+  paymentMethod      String?   @map("payment_method") @db.VarChar(50)
+  paymentStatus      String    @default("unpaid") @map("payment_status") @db.VarChar(20) // unpaid, partial, paid, refunded
+  paymentAmount      Decimal?  @default(0) @map("payment_amount") @db.Decimal(10, 2)
+
+  patient            Patient   @relation(fields: [patientId], references: [patientId])
+  doctor             Doctor    @relation(fields: [doctorId], references: [doctorId])
+  invoices           Invoice[]
+
+  @@unique([doctorId, schedule, scheduleAt])
+  @@index([appointmentType])
+  @@index([paymentStatus])
+  @@index([status, paymentStatus])
+  @@map("appointments")
+}
+
+// جدول مواعيد الأطباء (Doctor Schedules)
+model DoctorSchedule {
+  scheduleId    BigInt    @id @default(0) @map("schedule_id")
+  doctorId     BigInt    @map("doctor_id")
+  dayOfWeek     Int       @map("day_of_week") // 1=Sunday, 2=Monday, ..., 7=Saturday
+  startTime     String    @map("start_time") @db.VarChar(8) // Format: 'HH:MM' (24-hour format)
+  endTime       String    @map("end_time") @db.VarChar(8) // Format: 'HH:MM' (24-hour format)
+  slotDuration  Int       @default(30) @map("slot_duration") // Duration of each slot in minutes
+  isAvailable  Int       @default(1) @map("is_available") // 1=Available, 0=Unavailable
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  doctor        Doctor    @relation(fields: [doctorId], references: [doctorId], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@index([dayOfWeek])
+  @@index([isAvailable])
+  @@map("doctor_schedules")
+}
+
+// جدول السجلات الطبية (Medical Records)
+model MedicalRecord {
+  medicalRecordId BigInt    @id @default(0) @map("medicalrecord_id")
+  patientId       BigInt    @map("patient_id")
+  doctorId        BigInt    @map("doctor_id")
+  diagnosis       String?   @db.VarChar(1000)
+  symptoms         String?   @db.VarChar(4000) // JSON array or comma-separated text
+  medications      String?   @db.VarChar(4000) // JSON array or comma-separated text
+  treatmentPlan   String?   @map("treatmentplan") @db.VarChar(2000)
+  notes            String?   @db.VarChar(2000)
+  bloodPressure    String?   @map("blood_pressure") @db.VarChar(20)
+  temperature      Decimal?  @db.Decimal(4, 2)
+  images           String?   @db.VarChar(4000) // JSON array
+  height           Decimal?  @db.Decimal(5, 2) // Height in centimeters
+  weight           Decimal?  @db.Decimal(5, 2) // Weight in kilograms
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  patient          Patient   @relation(fields: [patientId], references: [patientId], onDelete: Cascade)
+  doctor           Doctor    @relation(fields: [doctorId], references: [doctorId], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([createdAt])
+  @@map("medical_records")
+}
+
+// جدول الفواتير (Invoices)
+model Invoice {
+  invoiceId      BigInt    @id @default(0) @map("invoice_id")
+  patientId      BigInt    @map("patient_id")
+  appointmentId  BigInt?   @map("appointment_id")
+  invoiceNumber  String?   @unique @map("invoice_number") @db.VarChar(50) // INV-2025-0001 (auto-generated by trigger)
+  invoiceDate    DateTime  @default(now()) @map("invoice_date") @db.Date
+  amount         Decimal   @map("amount") @db.Decimal(10, 2)
+  discount       Decimal   @default(0) @map("discount") @db.Decimal(10, 2)
+  totalAmount    Decimal   @map("total_amount") @db.Decimal(10, 2)
+  paidAmount     Decimal   @default(0) @map("paid_amount") @db.Decimal(10, 2)
+  paymentStatus  String    @default("unpaid") @map("payment_status") @db.VarChar(20) // unpaid, partial, paid, cancelled
+  paymentMethod  String?   @map("payment_method") @db.VarChar(50)
+  paymentDate    DateTime? @map("payment_date") @db.Date
+  notes          String?   @db.VarChar(500)
+  createdBy      BigInt?   @map("created_by")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+
+  patient        Patient   @relation(fields: [patientId], references: [patientId], onDelete: Cascade)
+  appointment    Appointment? @relation(fields: [appointmentId], references: [appointmentId], onDelete: SetNull)
+  creator        User?     @relation("InvoiceCreator", fields: [createdBy], references: [userId], onDelete: SetNull)
+
+  @@index([patientId])
+  @@index([appointmentId])
+  @@index([invoiceDate])
+  @@index([paymentStatus])
+  @@map("invoices")
+}
+
+// جدول سجل التدقيق (Audit Logs)
+model AuditLog {
+  id            Int       @id @default(autoincrement())
+  userId        BigInt?   @map("user_id")
+  action        String    @db.VarChar(100) // create, update, delete, read, etc.
+  resourceType  String    @map("resource_type") @db.VarChar(100) // Patient, Doctor, Appointment, etc.
+  resourceId    BigInt?   @map("resource_id")
+  details       String?   @db.VarChar(100)
+  ipAddress     String?   @map("ip_address") @db.VarChar(45)
+  userAgent     String?   @map("user_agent") @db.VarChar(500)
+  status        String    @db.VarChar(20) // success or failure
+  errorMessage  String?   @map("error_message") @db.VarChar(1000)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+
+  user          User?     @relation(fields: [userId], references: [userId])
+
+  @@index([userId])
+  @@index([resourceType])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
+}
+

@@ -947,7 +947,7 @@ export async function getInvoiceById(invoiceId: number): Promise<Invoice | null>
 
   return {
     INVOICE_ID: toNumber(invoice.invoiceId),
-    INVOICE_NUMBER: invoice.invoiceNumber,
+    INVOICE_NUMBER: invoice.invoiceNumber || '',
     INVOICE_DATE: invoice.invoiceDate,
     AMOUNT: Number(invoice.amount),
     DISCOUNT: Number(invoice.discount),

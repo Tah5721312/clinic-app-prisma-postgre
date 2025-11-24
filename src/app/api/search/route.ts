@@ -24,9 +24,8 @@ export async function GET(request: NextRequest) {
     const searchTerm = query.trim().toUpperCase();
     const results: SearchResult[] = [];
 
-    try {
-      // Search Patients
-      const patients = await prisma.patient.findMany({
+    // Search Patients
+    const patients = await prisma.patient.findMany({
         where: {
           OR: [
             { name: { contains: searchTerm, mode: 'insensitive' } },
@@ -36,13 +35,9 @@ export async function GET(request: NextRequest) {
           ],
         },
         take: limit,
-        orderBy: [
-          {
-            name: {
-              sort: 'asc',
-            },
-          },
-        ],
+        orderBy: {
+          name: 'asc',
+        },
       });
 
       patients.forEach((patient) => {
@@ -183,17 +178,14 @@ export async function GET(request: NextRequest) {
         });
       });
 
-      // Sort by relevance (higher relevance first)
-      results.sort((a, b) => b.relevance - a.relevance);
+    // Sort by relevance (higher relevance first)
+    results.sort((a, b) => b.relevance - a.relevance);
 
-      return NextResponse.json({
-        results: results.slice(0, limit),
-        total: results.length,
-        query: searchTerm,
-      });
-    } catch (dbError) {
-      throw dbError;
-    }
+    return NextResponse.json({
+      results: results.slice(0, limit),
+      total: results.length,
+      query: searchTerm,
+    });
   } catch (error: any) {
     console.error('Search error:', error);
     return NextResponse.json(

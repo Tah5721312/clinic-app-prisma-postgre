@@ -5,22 +5,6 @@ const nextConfig = {
   },
 
   reactStrictMode: true,
-  
-  // Fix webpack module loading issues
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-      };
-    }
-    return config;
-  },
-  
-  // Enable network access
-  experimental: {
-    // serverExternalPackages is not a valid Next.js experimental option
-  },
 
   // Uncoment to add domain whitelist
   // images: {

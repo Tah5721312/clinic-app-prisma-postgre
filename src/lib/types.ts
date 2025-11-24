@@ -227,6 +227,7 @@ export interface UserFromDB {
   ID: number;
   USERNAME: string;
   EMAIL: string;
+  ROLE_ID?: number;
   PASSWORD?: string;
   ISADMIN?: number;
   CREATED_AT?: Date;

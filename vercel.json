@@ -1,4 +1,7 @@
 {
+  "buildCommand": "prisma generate && next build",
+  "installCommand": "pnpm install",
+  "framework": "nextjs",
   "headers": [
     {
       "source": "/fonts/inter-var-latin.woff2",
@@ -9,5 +12,10 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "src/app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  }
 }

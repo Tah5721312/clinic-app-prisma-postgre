@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import UserInfoCard from '@/components/UserInfoCard';
 import HomePageClient from '@/components/HomePageClient';
 import { Calendar, Stethoscope, Users } from 'lucide-react';
+import { DOMAIN } from '@/lib/constants';
 
 
 export default async function HomePage() {
@@ -30,7 +31,7 @@ export default async function HomePage() {
 
   try {
     const cookieHeader = (await cookieStore).toString();
-    const res = await fetch(`${process.env.NEXTAUTH_URL}/api/users/profile/${user.id}`, {
+    const res = await fetch(`${DOMAIN}/api/users/profile/${user.id}`, {
       cache: 'no-store',
       headers: { Cookie: cookieHeader },
     });

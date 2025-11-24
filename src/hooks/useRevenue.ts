@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { DOMAIN } from '@/lib/constants';
 
 interface RevenueData {
   total: number;
@@ -25,7 +26,7 @@ export function useRevenue(): UseRevenueReturn {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/revenue?type=all');
+      const response = await fetch(`${DOMAIN}/api/revenue?type=all`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

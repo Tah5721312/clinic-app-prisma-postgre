@@ -2,6 +2,7 @@ import React from "react";
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { cookies } from 'next/headers';
+import { DOMAIN } from '@/lib/constants';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -38,8 +39,7 @@ export default async function ProfilePage({ params }: Props) {
   const cookieStore = cookies();
   const cookieHeader = (await cookieStore).toString();
   
-  const baseUrl = process.env.NEXTAUTH_URL ;
-  const res = await fetch(`${baseUrl}/api/users/profile/${id}`, {
+  const res = await fetch(`${DOMAIN}/api/users/profile/${id}`, {
     cache: "no-store",
     headers: { Cookie: cookieHeader },
   });

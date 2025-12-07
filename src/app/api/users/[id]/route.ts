@@ -14,7 +14,7 @@ export async function GET(
       include: {
         role: {
           include: {
-            rolePermissions: {
+            permissions: {
               orderBy: [
                 { subject: 'asc' },
                 { action: 'asc' },
@@ -32,7 +32,7 @@ export async function GET(
       );
     }
 
-    const permissions = (userData.role?.rolePermissions || []).map(rp => ({
+    const permissions = (userData.role?.permissions || []).map(rp => ({
       SUBJECT: rp.subject,
       ACTION: rp.action,
       FIELD_NAME: rp.fieldName,
@@ -144,7 +144,7 @@ export async function PUT(
       include: {
         role: {
           include: {
-            rolePermissions: {
+            permissions: {
               orderBy: [
                 { subject: 'asc' },
                 { action: 'asc' },
@@ -162,7 +162,7 @@ export async function PUT(
       );
     }
 
-    const permissions = (userData.role?.rolePermissions || []).map(rp => ({
+    const permissions = (userData.role?.permissions || []).map(rp => ({
       SUBJECT: rp.subject,
       ACTION: rp.action,
       FIELD_NAME: rp.fieldName,

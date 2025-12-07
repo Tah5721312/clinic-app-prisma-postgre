@@ -44,7 +44,7 @@ export default function InvoiceForm({
   // Specialty and doctor filtering for appointments
   const [selectedSpecialty, setSelectedSpecialty] = useState('');
   const { data: specialties } = useSpecialties();
-  const { data: doctors } = useDoctors(selectedSpecialty || undefined);
+  const { data: doctors } = useDoctors({ specialty: selectedSpecialty || undefined });
   
   // Custom dropdown states
   const [isAppointmentDropdownOpen, setIsAppointmentDropdownOpen] = useState(false);
@@ -221,6 +221,11 @@ export default function InvoiceForm({
 
   const calculateTotal = () => {
     return Math.max(0, formData.amount - formData.discount);
+  };
+
+  const calculateRemaining = () => {
+    const total = calculateTotal();
+    return Math.max(0, total - formData.paid_amount);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -534,11 +539,29 @@ export default function InvoiceForm({
           </div>
 
           {/* Total Amount Display */}
-          <div className='bg-gray-50 p-4 rounded-md'>
+          <div className='bg-gray-50 p-4 rounded-md space-y-3'>
             <div className='flex justify-between items-center'>
               <span className='text-lg font-medium text-gray-700'>Total Amount:</span>
               <span className='text-2xl font-bold text-blue-600'>
                 {calculateTotal().toFixed(2)} EGP
+              </span>
+            </div>
+            
+            {/* Paid Amount Display */}
+            <div className='flex justify-between items-center border-t border-gray-200 pt-3'>
+              <span className='text-base font-medium text-gray-600'>Paid Amount:</span>
+              <span className='text-xl font-semibold text-green-600'>
+                {formData.paid_amount.toFixed(2)} EGP
+              </span>
+            </div>
+            
+            {/* Remaining Amount Display */}
+            <div className='flex justify-between items-center border-t border-gray-200 pt-3'>
+              <span className='text-base font-medium text-gray-700'>Remaining Amount:</span>
+              <span className={`text-xl font-bold ${
+                calculateRemaining() > 0 ? 'text-red-600' : 'text-green-600'
+              }`}>
+                {calculateRemaining().toFixed(2)} EGP
               </span>
             </div>
           </div>

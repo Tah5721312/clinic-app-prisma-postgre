@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       include: {
         role: {
           include: {
-            rolePermissions: {
+            permissions: {
               orderBy: [
                 { subject: 'asc' },
                 { action: 'asc' },
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     // Transform the result to match the expected format
     const users: UserWithRolePermissions[] = usersData.map(user => {
-      const permissions = (user.role?.rolePermissions || []).map(rp => ({
+      const permissions = (user.role?.permissions || []).map(rp => ({
         SUBJECT: rp.subject,
         ACTION: rp.action,
         FIELD_NAME: rp.fieldName,

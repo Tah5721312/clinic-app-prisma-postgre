@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 
-import { Appointment, Doctor, Patient } from '@/lib/types';
+import { Appointment, Doctor, Patient, MedicalRecord } from '@/lib/types';
 import { DOMAIN } from '@/lib/constants';
 
 interface UseApiDataOptions {
@@ -112,24 +112,30 @@ export function useApiData<T>(
 }
 
 // Specific hooks for common endpoints
-export function useDoctors(specialty?: string) {
+export function useDoctors(params?: { specialty?: string; name?: string }) {
   const endpoint = useMemo(() => {
-    return specialty && specialty.trim()
-      ? `${DOMAIN}/api/doctors?specialty=${encodeURIComponent(specialty)}`
-      : `${DOMAIN}/api/doctors`;
-  }, [specialty]);
+    const qs = new URLSearchParams();
+    if (params?.specialty && params.specialty.trim()) {
+      qs.set('specialty', params.specialty);
+    }
+    if (params?.name && params.name.trim()) {
+      qs.set('name', params.name);
+    }
+    return qs.toString() ? `${DOMAIN}/api/doctors?${qs.toString()}` : `${DOMAIN}/api/doctors`;
+  }, [params?.specialty, params?.name]);
   
   return useApiData<Doctor[]>(endpoint);
 }
 
-export function usePatients(params?: { doctorId?: number | string; specialty?: string; identificationNumber?: string }) {
+export function usePatients(params?: { doctorId?: number | string; specialty?: string; identificationNumber?: string; name?: string }) {
   const endpoint = useMemo(() => {
     const qs = new URLSearchParams();
     if (params?.doctorId) qs.set('doctorId', String(params.doctorId));
     if (params?.specialty && params.specialty.trim()) qs.set('specialty', params.specialty);
     if (params?.identificationNumber && params.identificationNumber.trim()) qs.set('identificationNumber', params.identificationNumber);
+    if (params?.name && params.name.trim()) qs.set('name', params.name);
     return qs.toString() ? `${DOMAIN}/api/patients?${qs.toString()}` : `${DOMAIN}/api/patients`;
-  }, [params?.doctorId, params?.specialty, params?.identificationNumber]);
+  }, [params?.doctorId, params?.specialty, params?.identificationNumber, params?.name]);
   
   return useApiData<Patient[]>(endpoint);
 }
@@ -144,6 +150,7 @@ export function useAppointmentsWithFilters(params?: {
   identificationNumber?: string;
   invoiceNumber?: string;
   scheduleDate?: string;
+  patientName?: string;
 }) {
   // Extract values for proper memoization
   const doctorId = params?.doctorId;
@@ -151,6 +158,7 @@ export function useAppointmentsWithFilters(params?: {
   const identificationNumber = params?.identificationNumber?.trim() || undefined;
   const invoiceNumber = params?.invoiceNumber?.trim() || undefined;
   const scheduleDate = params?.scheduleDate?.trim() || undefined;
+  const patientName = params?.patientName?.trim() || undefined;
   
   // Memoize endpoint to prevent unnecessary re-fetches
   const endpoint = useMemo(() => {
@@ -160,8 +168,9 @@ export function useAppointmentsWithFilters(params?: {
     if (identificationNumber) qs.set('identificationNumber', identificationNumber);
     if (invoiceNumber) qs.set('invoiceNumber', invoiceNumber);
     if (scheduleDate) qs.set('scheduleDate', scheduleDate);
+    if (patientName) qs.set('patientName', patientName);
     return qs.toString() ? `${DOMAIN}/api/appointments?${qs.toString()}` : `${DOMAIN}/api/appointments`;
-  }, [doctorId, specialty, identificationNumber, invoiceNumber, scheduleDate]);
+  }, [doctorId, specialty, identificationNumber, invoiceNumber, scheduleDate, patientName]);
   
   return useApiData<Appointment[]>(endpoint);
 }
@@ -182,4 +191,15 @@ export function useAppointmentsByPatient(patientId: number | null) {
 
 export function useSpecialties() {
   return useApiData<string[]>(`${DOMAIN}/api/specialties`);
+}
+
+export function useMedicalRecords(params?: { patientId?: number | string; doctorId?: number | string }) {
+  const endpoint = useMemo(() => {
+    const qs = new URLSearchParams();
+    if (params?.patientId) qs.set('patientId', String(params.patientId));
+    if (params?.doctorId) qs.set('doctorId', String(params.doctorId));
+    return qs.toString() ? `${DOMAIN}/api/medical-records?${qs.toString()}` : `${DOMAIN}/api/medical-records`;
+  }, [params?.patientId, params?.doctorId]);
+  
+  return useApiData<MedicalRecord[]>(endpoint);
 }

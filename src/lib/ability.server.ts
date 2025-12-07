@@ -64,7 +64,7 @@ export async function fetchAbilityRulesFromDB(userId: number): Promise<AbilityRu
     include: {
       role: {
         include: {
-          rolePermissions: true,
+          permissions: true,
         },
       },
     },
@@ -75,7 +75,7 @@ export async function fetchAbilityRulesFromDB(userId: number): Promise<AbilityRu
   }
 
   // Transform Prisma results to match DbPermissionRow format
-  const rows: DbPermissionRow[] = (user.role.rolePermissions || []).map(rp => ({
+  const rows: DbPermissionRow[] = (user.role.permissions || []).map(rp => ({
     SUBJECT: rp.subject,
     ACTION: rp.action,
     FIELD_NAME: rp.fieldName,

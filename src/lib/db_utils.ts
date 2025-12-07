@@ -5,7 +5,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { executeQuery } from '@/lib/database';
-import { Patient, DoctorSchedule, CreateScheduleDto, UpdateScheduleDto, TimeSlot, Invoice, CreateInvoiceDto, MonthlyRevenueRow } from '@/lib/types';
+import { Patient, DoctorSchedule, CreateScheduleDto, UpdateScheduleDto, TimeSlot, Invoice, CreateInvoiceDto, MonthlyRevenueRow, MedicalRecord, CreateMedicalRecordDto, UpdateMedicalRecordDto } from '@/lib/types';
 
 // Helper function to convert BigInt to Number for compatibility
 function toNumber(id: bigint | number | null | undefined): number {
@@ -37,10 +37,16 @@ function calculatePaymentStatus(paidAmount: number, totalAmount: number): 'paid'
 /**
  * جلب جميع الأطباء
  */
-export async function getAllDoctors(specialty?: string) {
-  const where = specialty && specialty.trim() 
-    ? { specialty: { equals: specialty, mode: 'insensitive' as const } }
-    : {};
+export async function getAllDoctors(specialty?: string, name?: string) {
+  const where: any = {};
+
+  if (specialty && specialty.trim()) {
+    where.specialty = { equals: specialty, mode: 'insensitive' as const };
+  }
+
+  if (name && name.trim()) {
+    where.name = { contains: name.trim(), mode: 'insensitive' as const };
+  }
 
   const doctors = await prisma.doctor.findMany({
     where,
@@ -230,7 +236,7 @@ export async function deleteDoctorWithTransaction(id: number, cascade: boolean =
 /**
  * جلب جميع المرضى
  */
-export async function getAllPatients(filters?: { doctorId?: number; specialty?: string; identificationNumber?: string; patientId?: number }) {
+export async function getAllPatients(filters?: { doctorId?: number; specialty?: string; identificationNumber?: string; name?: string; patientId?: number }) {
   const where: any = {};
 
   if (filters?.patientId) {
@@ -242,13 +248,17 @@ export async function getAllPatients(filters?: { doctorId?: number; specialty?: 
   }
 
   if (filters?.identificationNumber && filters.identificationNumber.trim()) {
-    where.identificationNumber = { contains: filters.identificationNumber };
+    where.identificationNumber = { contains: filters.identificationNumber, mode: 'insensitive' as const };
+  }
+
+  if (filters?.name && filters.name.trim()) {
+    where.name = { contains: filters.name.trim(), mode: 'insensitive' as const };
   }
 
   const patients = await prisma.patient.findMany({
     where,
     include: {
-      primaryPhysicianRelation: filters?.specialty ? {
+      doctor: filters?.specialty ? {
         where: {
           specialty: { equals: filters.specialty, mode: 'insensitive' },
         },
@@ -261,7 +271,7 @@ export async function getAllPatients(filters?: { doctorId?: number; specialty?: 
   let filteredPatients = patients;
   if (filters?.specialty && filters.specialty.trim()) {
     filteredPatients = patients.filter(p => 
-      p.primaryPhysicianRelation?.specialty?.toLowerCase() === filters.specialty?.toLowerCase()
+      p.doctor?.specialty?.toLowerCase() === filters.specialty?.toLowerCase()
     );
   }
 
@@ -289,7 +299,7 @@ export async function getAllPatients(filters?: { doctorId?: number; specialty?: 
     PRIVACYCONSENT: p.privacyConsent,
     TREATMENTCONSENT: p.treatmentConsent,
     DISCLOSURECONSENT: p.disclosureConsent,
-    PRIMARYPHYSICIANNAME: p.primaryPhysicianRelation?.name || null,
+    PRIMARYPHYSICIANNAME: p.doctor?.name || null,
   })) as Patient[];
 }
 
@@ -300,7 +310,7 @@ export async function getPatientById(id: number) {
   const patient = await prisma.patient.findUnique({
     where: { patientId: toBigInt(id) },
     include: {
-      primaryPhysicianRelation: true,
+      doctor: true,
     },
   });
 
@@ -329,7 +339,7 @@ export async function getPatientById(id: number) {
     PRIVACYCONSENT: patient.privacyConsent,
     TREATMENTCONSENT: patient.treatmentConsent,
     DISCLOSURECONSENT: patient.disclosureConsent,
-    PRIMARYPHYSICIANNAME: patient.primaryPhysicianRelation?.name || null,
+    PRIMARYPHYSICIANNAME: patient.doctor?.name || null,
   };
 }
 
@@ -476,6 +486,7 @@ export async function getAllAppointments(filters?: {
   identificationNumber?: string;
   invoiceNumber?: string;
   scheduleDate?: string;
+  patientName?: string;
 }) {
   const where: any = {};
 
@@ -498,6 +509,7 @@ export async function getAllAppointments(filters?: {
     include: {
       patient: true,
       doctor: true,
+      invoices: true, // Include invoices
     },
     orderBy: { schedule: 'desc' },
   });
@@ -513,35 +525,53 @@ export async function getAllAppointments(filters?: {
 
   if (filters?.identificationNumber && filters.identificationNumber.trim()) {
     filteredAppointments = filteredAppointments.filter(a => 
-      a.patient.identificationNumber?.includes(filters.identificationNumber || '')
+      a.patient.identificationNumber?.toLowerCase().includes(filters.identificationNumber?.toLowerCase() || '')
     );
   }
 
-  // Note: Invoice filtering would require Invoice model - using raw query if needed
-  // For now, we'll return appointments without invoice data
-  return filteredAppointments.map(a => ({
-    APPOINTMENT_ID: toNumber(a.appointmentId),
-    PATIENT_ID: toNumber(a.patientId),
-    DOCTOR_ID: toNumber(a.doctorId),
-    SCHEDULE: a.schedule,
-    REASON: a.reason,
-    NOTE: a.note,
-    STATUS: a.status as 'pending' | 'scheduled' | 'cancelled',
-    CANCELLATIONREASON: a.cancellationReason,
-    PATIENT_NAME: a.patient.name,
-    DOCTOR_NAME: a.doctor.name,
-    APPOINTMENT_TYPE: a.appointmentType as 'consultation' | 'follow_up' | 'emergency',
-    PAYMENT_STATUS: a.paymentStatus as 'unpaid' | 'partial' | 'paid' | 'refunded',
-    PAYMENT_AMOUNT: a.paymentAmount ? Number(a.paymentAmount) : 0,
-    PAYMENT_METHOD: a.paymentMethod,
-    CONSULTATION_FEE: a.doctor.consultationFee ? Number(a.doctor.consultationFee) : 0,
-    FOLLOW_UP_FEE: a.doctor.followUpFee ? Number(a.doctor.followUpFee) : 0,
-    HAS_INVOICE: 0, // Would need Invoice model
-    INVOICE_ID: null,
-    INVOICE_NUMBER: null,
-    INVOICE_PAYMENT_STATUS: null,
-    IDENTIFICATIONNUMBER: a.patient.identificationNumber || '',
-  }));
+  if (filters?.patientName && filters.patientName.trim()) {
+    filteredAppointments = filteredAppointments.filter(a => 
+      a.patient.name?.toLowerCase().includes(filters.patientName?.toLowerCase() || '')
+    );
+  }
+
+  if (filters?.invoiceNumber && filters.invoiceNumber.trim()) {
+    filteredAppointments = filteredAppointments.filter(a => 
+      a.invoices.some(inv => 
+        inv.invoiceNumber?.toLowerCase().includes(filters.invoiceNumber?.toLowerCase() || '')
+      )
+    );
+  }
+
+  return filteredAppointments.map(a => {
+    // Get the first invoice if exists
+    const invoice = a.invoices && a.invoices.length > 0 ? a.invoices[0] : null;
+    
+    return {
+      APPOINTMENT_ID: toNumber(a.appointmentId),
+      PATIENT_ID: toNumber(a.patientId),
+      DOCTOR_ID: toNumber(a.doctorId),
+      SCHEDULE: a.schedule,
+      SCHEDULE_AT: a.scheduleAt,
+      REASON: a.reason,
+      NOTE: a.note,
+      STATUS: a.status as 'pending' | 'scheduled' | 'cancelled',
+      CANCELLATIONREASON: a.cancellationReason,
+      PATIENT_NAME: a.patient.name,
+      DOCTOR_NAME: a.doctor.name,
+      APPOINTMENT_TYPE: a.appointmentType as 'consultation' | 'follow_up' | 'emergency',
+      PAYMENT_STATUS: a.paymentStatus as 'unpaid' | 'partial' | 'paid' | 'refunded',
+      PAYMENT_AMOUNT: a.paymentAmount ? Number(a.paymentAmount) : 0,
+      PAYMENT_METHOD: a.paymentMethod,
+      CONSULTATION_FEE: a.doctor.consultationFee ? Number(a.doctor.consultationFee) : 0,
+      FOLLOW_UP_FEE: a.doctor.followUpFee ? Number(a.doctor.followUpFee) : 0,
+      HAS_INVOICE: invoice ? 1 : 0,
+      INVOICE_ID: invoice ? toNumber(invoice.invoiceId) : null,
+      INVOICE_NUMBER: invoice?.invoiceNumber || null,
+      INVOICE_PAYMENT_STATUS: invoice?.paymentStatus || null,
+      IDENTIFICATIONNUMBER: a.patient.identificationNumber || '',
+    };
+  });
 }
 
 /**
@@ -553,32 +583,40 @@ export async function getPatientAppointments(patientId: number) {
     include: {
       patient: true,
       doctor: true,
+      invoices: true, // Include invoices
     },
     orderBy: { schedule: 'desc' },
   });
 
-  return appointments.map(a => ({
-    APPOINTMENT_ID: toNumber(a.appointmentId),
-    PATIENT_ID: toNumber(a.patientId),
-    DOCTOR_ID: toNumber(a.doctorId),
-    SCHEDULE: a.schedule,
-    REASON: a.reason,
-    NOTE: a.note,
-    STATUS: a.status as 'pending' | 'scheduled' | 'cancelled',
-    CANCELLATIONREASON: a.cancellationReason,
-    PATIENT_NAME: a.patient.name,
-    DOCTOR_NAME: a.doctor.name,
-    APPOINTMENT_TYPE: a.appointmentType as 'consultation' | 'follow_up' | 'emergency',
-    PAYMENT_STATUS: a.paymentStatus as 'unpaid' | 'partial' | 'paid' | 'refunded',
-    PAYMENT_AMOUNT: a.paymentAmount ? Number(a.paymentAmount) : 0,
-    PAYMENT_METHOD: a.paymentMethod,
-    CONSULTATION_FEE: a.doctor.consultationFee ? Number(a.doctor.consultationFee) : 0,
-    FOLLOW_UP_FEE: a.doctor.followUpFee ? Number(a.doctor.followUpFee) : 0,
-    HAS_INVOICE: 0,
-    INVOICE_ID: null,
-    INVOICE_NUMBER: null,
-    INVOICE_PAYMENT_STATUS: null,
-  }));
+  return appointments.map(a => {
+    // Get the first invoice if exists
+    const invoice = a.invoices && a.invoices.length > 0 ? a.invoices[0] : null;
+    
+    return {
+      APPOINTMENT_ID: toNumber(a.appointmentId),
+      PATIENT_ID: toNumber(a.patientId),
+      DOCTOR_ID: toNumber(a.doctorId),
+      SCHEDULE: a.schedule,
+      SCHEDULE_AT: a.scheduleAt,
+      REASON: a.reason,
+      NOTE: a.note,
+      STATUS: a.status as 'pending' | 'scheduled' | 'cancelled',
+      CANCELLATIONREASON: a.cancellationReason,
+      PATIENT_NAME: a.patient.name,
+      DOCTOR_NAME: a.doctor.name,
+      APPOINTMENT_TYPE: a.appointmentType as 'consultation' | 'follow_up' | 'emergency',
+      PAYMENT_STATUS: a.paymentStatus as 'unpaid' | 'partial' | 'paid' | 'refunded',
+      PAYMENT_AMOUNT: a.paymentAmount ? Number(a.paymentAmount) : 0,
+      PAYMENT_METHOD: a.paymentMethod,
+      CONSULTATION_FEE: a.doctor.consultationFee ? Number(a.doctor.consultationFee) : 0,
+      FOLLOW_UP_FEE: a.doctor.followUpFee ? Number(a.doctor.followUpFee) : 0,
+      HAS_INVOICE: invoice ? 1 : 0,
+      INVOICE_ID: invoice ? toNumber(invoice.invoiceId) : null,
+      INVOICE_NUMBER: invoice?.invoiceNumber || null,
+      INVOICE_PAYMENT_STATUS: invoice?.paymentStatus || null,
+      IDENTIFICATIONNUMBER: a.patient.identificationNumber || '',
+    };
+  });
 }
 
 /**
@@ -1454,4 +1492,338 @@ export async function isTimeSlotAvailable(doctorId: number, date: Date, time: st
   });
 
   return !appointment;
+}
+
+// ==================== MEDICAL RECORDS ====================
+
+/**
+ * جلب جميع السجلات الطبية
+ */
+export async function getAllMedicalRecords(filters?: {
+  patientId?: number;
+  doctorId?: number;
+  currentUserId?: number;
+  userRole?: number; // 213 = Doctor, 216 = Patient, 212 = Admin
+  isAdmin?: boolean; // true for superadmin
+}) {
+  const where: any = {};
+
+  // تطبيق الصلاحيات
+  if (filters?.isAdmin) {
+    // السوبر أدمن: لا توجد قيود - يرى جميع السجلات
+  } else if (filters?.userRole === 213 && filters?.currentUserId) {
+    // الدكتور: يرى فقط السجلات التي أنشأها
+    where.doctorId = toBigInt(filters.currentUserId);
+  } else if (filters?.userRole === 216) {
+    // المريض: يرى فقط سجلاته
+    if (filters.patientId) {
+      where.patientId = toBigInt(filters.patientId);
+    } else {
+      // إذا لم يكن هناك patientId، لا نرجع أي سجلات
+      where.patientId = BigInt(-1); // Always false condition
+    }
+  }
+  // الأدمن: لا توجد قيود
+
+  // Filters إضافية
+  if (filters?.patientId && filters.userRole !== 216) {
+    where.patientId = toBigInt(filters.patientId);
+  }
+
+  if (filters?.doctorId && filters.userRole !== 213) {
+    where.doctorId = toBigInt(filters.doctorId);
+  }
+
+  const records = await prisma.medicalRecord.findMany({
+    where,
+    include: {
+      patient: {
+        select: {
+          name: true,
+        },
+      },
+      doctor: {
+        select: {
+          name: true,
+          specialty: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  // Convert to expected format
+  return records.map(record => ({
+    MEDICALRECORD_ID: toNumber(record.medicalRecordId),
+    PATIENT_ID: toNumber(record.patientId),
+    DOCTOR_ID: toNumber(record.doctorId),
+    DIAGNOSIS: record.diagnosis,
+    SYMPTOMS: record.symptoms,
+    MEDICATIONS: record.medications,
+    TREATMENTPLAN: record.treatmentPlan,
+    NOTES: record.notes,
+    BLOOD_PRESSURE: record.bloodPressure,
+    TEMPERATURE: record.temperature ? Number(record.temperature) : null,
+    IMAGES: record.images,
+    HEIGHT: record.height ? Number(record.height) : null,
+    WEIGHT: record.weight ? Number(record.weight) : null,
+    CREATED_AT: record.createdAt,
+    UPDATED_AT: record.updatedAt,
+    PATIENT_NAME: record.patient.name,
+    DOCTOR_NAME: record.doctor.name,
+    DOCTOR_SPECIALTY: record.doctor.specialty,
+  }));
+}
+
+/**
+ * جلب سجل طبي محدد
+ */
+export async function getMedicalRecordById(id: number, currentUserId?: number, userRole?: number, isAdmin?: boolean) {
+  const where: any = {
+    medicalRecordId: toBigInt(id),
+  };
+
+  // تطبيق الصلاحيات
+  if (isAdmin) {
+    // السوبر أدمن: لا توجد قيود - يرى جميع السجلات
+  } else if (userRole === 213 && currentUserId) {
+    // الدكتور: يرى فقط السجلات التي أنشأها
+    where.doctorId = toBigInt(currentUserId);
+  } else if (userRole === 216 && currentUserId) {
+    // المريض: يرى فقط سجلاته (يحتاج patient_id)
+    // سنتحقق من ذلك في API route
+  }
+
+  const record = await prisma.medicalRecord.findFirst({
+    where,
+    include: {
+      patient: {
+        select: {
+          name: true,
+        },
+      },
+      doctor: {
+        select: {
+          name: true,
+          specialty: true,
+        },
+      },
+    },
+  });
+
+  if (!record) return null;
+
+  return {
+    MEDICALRECORD_ID: toNumber(record.medicalRecordId),
+    PATIENT_ID: toNumber(record.patientId),
+    DOCTOR_ID: toNumber(record.doctorId),
+    DIAGNOSIS: record.diagnosis,
+    SYMPTOMS: record.symptoms,
+    MEDICATIONS: record.medications,
+    TREATMENTPLAN: record.treatmentPlan,
+    NOTES: record.notes,
+    BLOOD_PRESSURE: record.bloodPressure,
+    TEMPERATURE: record.temperature ? Number(record.temperature) : null,
+    IMAGES: record.images,
+    HEIGHT: record.height ? Number(record.height) : null,
+    WEIGHT: record.weight ? Number(record.weight) : null,
+    CREATED_AT: record.createdAt,
+    UPDATED_AT: record.updatedAt,
+    PATIENT_NAME: record.patient.name,
+    DOCTOR_NAME: record.doctor.name,
+    DOCTOR_SPECIALTY: record.doctor.specialty,
+  };
+}
+
+/**
+ * إضافة سجل طبي جديد
+ */
+export async function createMedicalRecord(record: CreateMedicalRecordDto) {
+  const newRecord = await prisma.medicalRecord.create({
+    data: {
+      patientId: toBigInt(record.patient_id),
+      doctorId: toBigInt(record.doctor_id),
+      diagnosis: record.diagnosis || null,
+      symptoms: record.symptoms || null,
+      medications: record.medications || null,
+      treatmentPlan: record.treatmentplan || null,
+      notes: record.notes || null,
+      bloodPressure: record.blood_pressure || null,
+      temperature: record.temperature || null,
+      images: record.images || null,
+      height: record.height || null,
+      weight: record.weight || null,
+    },
+  });
+
+  return toNumber(newRecord.medicalRecordId);
+}
+
+/**
+ * تحديث سجل طبي
+ */
+export async function updateMedicalRecord(
+  id: number,
+  record: UpdateMedicalRecordDto,
+  currentUserId?: number,
+  userRole?: number,
+  isAdmin?: boolean
+) {
+  // التحقق من الصلاحيات: فقط الدكتور الذي أنشأ السجل أو الأدمن/السوبر أدمن يمكنه التعديل
+  if (userRole === 213 && currentUserId && !isAdmin) {
+    const existingRecord = await prisma.medicalRecord.findUnique({
+      where: { medicalRecordId: toBigInt(id) },
+      select: { doctorId: true },
+    });
+
+    if (!existingRecord) {
+      throw new Error('Medical record not found');
+    }
+
+    if (existingRecord.doctorId !== toBigInt(currentUserId)) {
+      throw new Error('Unauthorized: You can only update your own medical records');
+    }
+  }
+
+  const updateData: any = {};
+
+  if (record.diagnosis !== undefined) {
+    updateData.diagnosis = record.diagnosis || null;
+  }
+  if (record.symptoms !== undefined) {
+    updateData.symptoms = record.symptoms || null;
+  }
+  if (record.medications !== undefined) {
+    updateData.medications = record.medications || null;
+  }
+  if (record.treatmentplan !== undefined) {
+    updateData.treatmentPlan = record.treatmentplan || null;
+  }
+  if (record.notes !== undefined) {
+    updateData.notes = record.notes || null;
+  }
+  if (record.blood_pressure !== undefined) {
+    updateData.bloodPressure = record.blood_pressure || null;
+  }
+  if (record.temperature !== undefined) {
+    updateData.temperature = record.temperature || null;
+  }
+  if (record.images !== undefined) {
+    updateData.images = record.images || null;
+  }
+  if (record.height !== undefined) {
+    updateData.height = record.height || null;
+  }
+  if (record.weight !== undefined) {
+    updateData.weight = record.weight || null;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return;
+  }
+
+  await prisma.medicalRecord.update({
+    where: { medicalRecordId: toBigInt(id) },
+    data: updateData,
+  });
+}
+
+/**
+ * حذف سجل طبي
+ */
+export async function deleteMedicalRecord(id: number, currentUserId?: number, userRole?: number, isAdmin?: boolean) {
+  // التحقق من الصلاحيات: فقط الدكتور الذي أنشأ السجل أو الأدمن/السوبر أدمن يمكنه الحذف
+  if (userRole === 213 && currentUserId && !isAdmin) {
+    const existingRecord = await prisma.medicalRecord.findUnique({
+      where: { medicalRecordId: toBigInt(id) },
+      select: { doctorId: true },
+    });
+
+    if (!existingRecord) {
+      throw new Error('Medical record not found');
+    }
+
+    if (existingRecord.doctorId !== toBigInt(currentUserId)) {
+      throw new Error('Unauthorized: You can only delete your own medical records');
+    }
+  }
+
+  await prisma.medicalRecord.delete({
+    where: { medicalRecordId: toBigInt(id) },
+  });
+}
+
+// ==================== SPECIALTIES ====================
+
+/**
+ * جلب جميع التخصصات
+ */
+export async function getAllSpecialties(activeOnly: boolean = true) {
+  // Note: activeOnly parameter is kept for compatibility but not used since is_active field is removed
+  // All specialties are considered active
+  
+  const specialties = await prisma.specialty.findMany({
+    orderBy: {
+      name: 'asc',
+    },
+  });
+
+  // Convert to expected format
+  return specialties.map(s => ({
+    SPECIALTY_ID: s.specialtyId,
+    NAME: s.name,
+    DESCRIPTION: s.description || null,
+  }));
+}
+
+/**
+ * إضافة تخصص جديد
+ */
+export async function createSpecialty(name: string, description?: string) {
+  const specialty = await prisma.specialty.create({
+    data: {
+      name: name.trim(),
+      description: description?.trim() || null,
+    },
+  });
+
+  return specialty.specialtyId;
+}
+
+/**
+ * تحديث تخصص
+ */
+export async function updateSpecialty(specialtyId: number, name: string, description?: string, isActive?: boolean) {
+  // Note: isActive parameter is kept for compatibility but not used since is_active field is removed
+  
+  const updateData: any = {};
+  
+  if (name) {
+    updateData.name = name.trim();
+  }
+  
+  if (description !== undefined) {
+    updateData.description = description?.trim() || null;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    console.warn('⚠️ No updates to apply');
+    return;
+  }
+
+  await prisma.specialty.update({
+    where: { specialtyId },
+    data: updateData,
+  });
+}
+
+/**
+ * حذف تخصص
+ */
+export async function deleteSpecialty(specialtyId: number) {
+  await prisma.specialty.delete({
+    where: { specialtyId },
+  });
 }

@@ -13,253 +13,292 @@ async function main() {
   try {
     // 1. Create Roles
     console.log('1. Creating roles...');
-    const roles = await Promise.all([
-      prisma.role.upsert({
-        where: { roleId: 211 },
-        update: {},
-        create: {
-          roleId: 211,
-          name: 'SUPER_ADMIN',
-          description: 'Super Administrator with all permissions',
-          isActive: 1,
-        },
-      }),
-      prisma.role.upsert({
-        where: { roleId: 212 },
-        update: {},
-        create: {
-          roleId: 212,
-          name: 'ADMIN',
-          description: 'Administrator',
-          isActive: 1,
-        },
-      }),
-      prisma.role.upsert({
-        where: { roleId: 213 },
-        update: {},
-        create: {
-          roleId: 213,
-          name: 'DOCTOR',
-          description: 'Doctor',
-          isActive: 1,
-        },
-      }),
-      prisma.role.upsert({
-        where: { roleId: 214 },
-        update: {},
-        create: {
-          roleId: 214,
-          name: 'NURSE',
-          description: 'Nurse',
-          isActive: 1,
-        },
-      }),
-      prisma.role.upsert({
-        where: { roleId: 215 },
-        update: {},
-        create: {
-          roleId: 215,
-          name: 'RECEPTIONIST',
-          description: 'Receptionist',
-          isActive: 1,
-        },
-      }),
-      prisma.role.upsert({
-        where: { roleId: 216 },
-        update: {},
-        create: {
-          roleId: 216,
-          name: 'PATIENT',
-          description: 'Patient',
-          isActive: 1,
-        },
-      }),
-    ]);
-    console.log(`   ✅ Created ${roles.length} roles\n`);
-
-    // 2. Create Doctors (sequentially to avoid ID conflicts)
-    console.log('2. Creating doctors...');
-    const doctors = [
-      await prisma.doctor.upsert({
-        where: { email: 'ahmed.mostafa11@example.com' },
-        update: {},
-        create: {
-          name: 'د. أحمد مصطفى',
-          email: 'ahmed.mostafa11@example.com',
-          phone: '+201234567110',
-          specialty: 'طب القلب',
-          experience: 11,
-          qualification: 'دكتوراه في طب القلب',
-          image: 'https://example.com/images/doctor2.jpg',
-          bio: 'خبير في أمراض القلب والشرايين.',
-          consultationFee: 300,
-          followUpFee: 200,
-          isAvailable: 1,
-        },
-      }),
-      await prisma.doctor.upsert({
-        where: { email: 'sara.ali1@example.com' },
-        update: {},
-        create: {
-          name: 'د. سارة علي',
-          email: 'sara.ali1@example.com',
-          phone: '+201981654321',
-          specialty: 'طب الأطفال',
-          experience: 8,
-          qualification: 'ماجستير طب الأطفال',
-          image: 'https://example.com/images/doctor2.jpg',
-          bio: 'متخصصة في علاج الأطفال وحديثي الولادة.',
-          consultationFee: 250,
-          followUpFee: 150,
-          isAvailable: 1,
-        },
-      }),
-      await prisma.doctor.upsert({
-        where: { email: 'mohamed.hassan1@example.com' },
-        update: {},
-        create: {
-          name: 'د. محمد حسن',
-          email: 'mohamed.hassan1@example.com',
-          phone: '+201112123344',
-          specialty: 'الجراحة العامة',
-          experience: 20,
-          qualification: 'زمالة الجراحة العامة',
-          image: 'https://example.com/images/doctor3.jpg',
-          bio: 'جراح معتمد مع خبرة واسعة.',
-          consultationFee: 350,
-          followUpFee: 250,
-          isAvailable: 1,
-        },
-      }),
-      await prisma.doctor.upsert({
-        where: { email: 'leila.ahmed1@example.com' },
-        update: {},
-        create: {
-          name: 'د. ليلى أحمد',
-          email: 'leila.ahmed1@example.com',
-          phone: '+201122114455',
-          specialty: 'طب الأعصاب',
-          experience: 12,
-          qualification: 'دكتوراه في الأعصاب',
-          image: 'https://example.com/images/doctor4.jpg',
-          bio: 'متخصصة في أمراض الجهاز العصبي.',
-          consultationFee: 320,
-          followUpFee: 220,
-          isAvailable: 1,
-        },
-      }),
-      await prisma.doctor.upsert({
-        where: { email: 'karim.samir1@example.com' },
-        update: {},
-        create: {
-          name: 'د. كريم سمير',
-          email: 'karim.samir1@example.com',
-          phone: '+201133145566',
-          specialty: 'طب العيون',
-          experience: 10,
-          qualification: 'ماجستير طب العيون',
-          image: 'https://example.com/images/doctor5.jpg',
-          bio: 'خبرة في جراحات العيون الحديثة.',
-          consultationFee: 280,
-          followUpFee: 180,
-          isAvailable: 1,
-        },
-      }),
-      await prisma.doctor.upsert({
-        where: { email: 'hala.foua1d1@example.com' },
-        update: {},
-        create: {
-          name: 'د. هالة فؤاد',
-          email: 'hala.foua1d1@example.com',
-          phone: '+201144551577',
-          specialty: 'طب الجلدية',
-          experience: 7,
-          qualification: 'بكالوريوس طب وجراحة',
-          image: 'https://example.com/images/doctor6.jpg',
-          bio: 'تعالج الأمراض الجلدية وحساسية الجلد.',
-          consultationFee: 200,
-          followUpFee: 120,
-          isAvailable: 1,
-        },
-      }),
-      await prisma.doctor.upsert({
-        where: { email: 'mahmoud.nader1@example.com' },
-        update: {},
-        create: {
-          name: 'د. محمود نادر',
-          email: 'mahmoud.nader1@example.com',
-          phone: '+201155617788',
-          specialty: 'طب الأسنان',
-          experience: 14,
-          qualification: 'دكتوراه في طب الأسنان',
-          image: 'https://example.com/images/doctor7.jpg',
-          bio: 'مختص في جراحة الفم والأسنان.',
-          consultationFee: 250,
-          followUpFee: 150,
-          isAvailable: 1,
-        },
-      }),
-      await prisma.doctor.upsert({
-        where: { email: 'mona.hassan1@example.com' },
-        update: {},
-        create: {
-          name: 'د. منى حسن',
-          email: 'mona.hassan1@example.com',
-          phone: '+201161778899',
-          specialty: 'طب الروماتيزم',
-          experience: 9,
-          qualification: 'ماجستير في الروماتيزم',
-          image: 'https://example.com/images/doctor8.jpg',
-          bio: 'تعالج الأمراض المزمنة والمفاصل.',
-          consultationFee: 270,
-          followUpFee: 170,
-          isAvailable: 1,
-        },
-      }),
-      await prisma.doctor.upsert({
-        where: { email: 'sami.ali1@example.com' },
-        update: {},
-        create: {
-          name: 'د. سامي علي',
-          email: 'sami.ali1@example.com',
-          phone: '+201177819900',
-          specialty: 'طب الطوارئ',
-          experience: 11,
-          qualification: 'بكالوريوس طب الطوارئ',
-          image: 'https://example.com/images/doctor9.jpg',
-          bio: 'خبرة في التعامل مع الحالات الطارئة.',
-          consultationFee: 300,
-          followUpFee: 200,
-          isAvailable: 1,
-        },
-      }),
-      await prisma.doctor.upsert({
-        where: { email: 'reem.abdullah1@example.com' },
-        update: {},
-        create: {
-          name: 'د. ريم عبد الله',
-          email: 'reem.abdullah1@example.com',
-          phone: '+201181990011',
-          specialty: 'طب النساء والتوليد',
-          experience: 13,
-          qualification: 'ماجستير في النساء والتوليد',
-          image: 'https://example.com/images/doctor10.jpg',
-          bio: 'تتابع الحمل والولادة.',
-          consultationFee: 290,
-          followUpFee: 190,
-          isAvailable: 1,
-        },
-      }),
+    const rolesData = [
+      {
+        roleId: 211,
+        name: 'SUPER_ADMIN',
+        description: 'Super Administrator with all permissions',
+        isActive: 1,
+      },
+      {
+        roleId: 212,
+        name: 'ADMIN',
+        description: 'Administrator',
+        isActive: 1,
+      },
+      {
+        roleId: 213,
+        name: 'DOCTOR',
+        description: 'Doctor',
+        isActive: 1,
+      },
+      {
+        roleId: 214,
+        name: 'NURSE',
+        description: 'Nurse',
+        isActive: 1,
+      },
+      {
+        roleId: 215,
+        name: 'RECEPTIONIST',
+        description: 'Receptionist',
+        isActive: 1,
+      },
+      {
+        roleId: 216,
+        name: 'PATIENT',
+        description: 'Patient',
+        isActive: 1,
+      },
     ];
-    console.log(`   ✅ Created ${doctors.length} doctors\n`);
 
-    // 3. Create Patients (sequentially)
-    console.log('3. Creating patients...');
-    const patients = [
-      await prisma.patient.upsert({
-        where: { email: 'ahmed.ibrahim1@example.com' },
-        update: {},
-        create: {
+    const roles = [];
+    for (const roleData of rolesData) {
+      const existing = await prisma.role.findUnique({
+        where: { roleId: roleData.roleId },
+      });
+      if (existing) {
+        roles.push(
+          await prisma.role.update({
+            where: { roleId: roleData.roleId },
+            data: roleData,
+          })
+        );
+      } else {
+        roles.push(await prisma.role.create({ data: roleData }));
+      }
+    }
+    console.log(`   ✅ Created/Updated ${roles.length} roles\n`);
+
+    // 2. Create Specialties
+    console.log('2. Creating specialties...');
+    let specialties = [];
+    try {
+      const specialtiesData = [
+        { name: 'طب القلب', description: 'تخصص في أمراض القلب والشرايين' },
+        { name: 'طب الأطفال', description: 'تخصص في علاج الأطفال وحديثي الولادة' },
+        { name: 'الجراحة العامة', description: 'تخصص في الجراحة العامة' },
+        { name: 'طب الأعصاب', description: 'تخصص في أمراض الجهاز العصبي' },
+        { name: 'طب العيون', description: 'تخصص في أمراض العيون وجراحاتها' },
+        { name: 'طب الجلدية', description: 'تخصص في الأمراض الجلدية' },
+        { name: 'طب الأسنان', description: 'تخصص في جراحة الفم والأسنان' },
+        { name: 'طب الروماتيزم', description: 'تخصص في أمراض المفاصل والروماتيزم' },
+        { name: 'طب الطوارئ', description: 'تخصص في التعامل مع الحالات الطارئة' },
+        { name: 'طب النساء والتوليد', description: 'تخصص في متابعة الحمل والولادة' },
+      ];
+
+      for (const specialtyData of specialtiesData) {
+        const existing = await prisma.specialty.findUnique({
+          where: { name: specialtyData.name },
+        });
+        if (existing) {
+          specialties.push(existing);
+        } else {
+          specialties.push(await prisma.specialty.create({ data: specialtyData }));
+        }
+      }
+      console.log(`   ✅ Created/Updated ${specialties.length} specialties\n`);
+    } catch (error: any) {
+      if (error.code === 'P2021') {
+        console.log(`   ⚠️  Specialties table does not exist, skipping...\n`);
+      } else {
+        throw error;
+      }
+    }
+
+    // 3. Create Doctors (sequentially to avoid ID conflicts)
+    console.log('3. Creating doctors...');
+    
+    // Helper function to create or update doctor
+    const createOrUpdateDoctor = async (doctorData: any) => {
+      const existing = await prisma.doctor.findFirst({
+        where: {
+          OR: [
+            { email: doctorData.email },
+            { phone: doctorData.phone },
+          ],
+        },
+      });
+      
+      if (existing) {
+        return await prisma.doctor.update({
+          where: { doctorId: existing.doctorId },
+          data: doctorData,
+        });
+      } else {
+        return await prisma.doctor.create({
+          data: doctorData,
+        });
+      }
+    };
+
+    const doctorsData = [
+      {
+        name: 'د. أحمد مصطفى',
+        email: 'ahmed.mostafa11@example.com',
+        phone: '+201234567110',
+        specialty: 'طب القلب',
+        experience: 11,
+        qualification: 'دكتوراه في طب القلب',
+        image: 'https://example.com/images/doctor2.jpg',
+        bio: 'خبير في أمراض القلب والشرايين.',
+        consultationFee: 300,
+        followUpFee: 200,
+        isAvailable: 1,
+      },
+      {
+        name: 'د. سارة علي',
+        email: 'sara.ali1@example.com',
+        phone: '+201981654321',
+        specialty: 'طب الأطفال',
+        experience: 8,
+        qualification: 'ماجستير طب الأطفال',
+        image: 'https://example.com/images/doctor2.jpg',
+        bio: 'متخصصة في علاج الأطفال وحديثي الولادة.',
+        consultationFee: 250,
+        followUpFee: 150,
+        isAvailable: 1,
+      },
+      {
+        name: 'د. محمد حسن',
+        email: 'mohamed.hassan1@example.com',
+        phone: '+201112123344',
+        specialty: 'الجراحة العامة',
+        experience: 20,
+        qualification: 'زمالة الجراحة العامة',
+        image: 'https://example.com/images/doctor3.jpg',
+        bio: 'جراح معتمد مع خبرة واسعة.',
+        consultationFee: 350,
+        followUpFee: 250,
+        isAvailable: 1,
+      },
+      {
+        name: 'د. ليلى أحمد',
+        email: 'leila.ahmed1@example.com',
+        phone: '+201122114455',
+        specialty: 'طب الأعصاب',
+        experience: 12,
+        qualification: 'دكتوراه في الأعصاب',
+        image: 'https://example.com/images/doctor4.jpg',
+        bio: 'متخصصة في أمراض الجهاز العصبي.',
+        consultationFee: 320,
+        followUpFee: 220,
+        isAvailable: 1,
+      },
+      {
+        name: 'د. كريم سمير',
+        email: 'karim.samir1@example.com',
+        phone: '+201133145566',
+        specialty: 'طب العيون',
+        experience: 10,
+        qualification: 'ماجستير طب العيون',
+        image: 'https://example.com/images/doctor5.jpg',
+        bio: 'خبرة في جراحات العيون الحديثة.',
+        consultationFee: 280,
+        followUpFee: 180,
+        isAvailable: 1,
+      },
+      {
+        name: 'د. هالة فؤاد',
+        email: 'hala.foua1d1@example.com',
+        phone: '+201144551577',
+        specialty: 'طب الجلدية',
+        experience: 7,
+        qualification: 'بكالوريوس طب وجراحة',
+        image: 'https://example.com/images/doctor6.jpg',
+        bio: 'تعالج الأمراض الجلدية وحساسية الجلد.',
+        consultationFee: 200,
+        followUpFee: 120,
+        isAvailable: 1,
+      },
+      {
+        name: 'د. محمود نادر',
+        email: 'mahmoud.nader1@example.com',
+        phone: '+201155617788',
+        specialty: 'طب الأسنان',
+        experience: 14,
+        qualification: 'دكتوراه في طب الأسنان',
+        image: 'https://example.com/images/doctor7.jpg',
+        bio: 'مختص في جراحة الفم والأسنان.',
+        consultationFee: 250,
+        followUpFee: 150,
+        isAvailable: 1,
+      },
+      {
+        name: 'د. منى حسن',
+        email: 'mona.hassan1@example.com',
+        phone: '+201161778899',
+        specialty: 'طب الروماتيزم',
+        experience: 9,
+        qualification: 'ماجستير في الروماتيزم',
+        image: 'https://example.com/images/doctor8.jpg',
+        bio: 'تعالج الأمراض المزمنة والمفاصل.',
+        consultationFee: 270,
+        followUpFee: 170,
+        isAvailable: 1,
+      },
+      {
+        name: 'د. سامي علي',
+        email: 'sami.ali1@example.com',
+        phone: '+201177819900',
+        specialty: 'طب الطوارئ',
+        experience: 11,
+        qualification: 'بكالوريوس طب الطوارئ',
+        image: 'https://example.com/images/doctor9.jpg',
+        bio: 'خبرة في التعامل مع الحالات الطارئة.',
+        consultationFee: 300,
+        followUpFee: 200,
+        isAvailable: 1,
+      },
+      {
+        name: 'د. ريم عبد الله',
+        email: 'reem.abdullah1@example.com',
+        phone: '+201181990011',
+        specialty: 'طب النساء والتوليد',
+        experience: 13,
+        qualification: 'ماجستير في النساء والتوليد',
+        image: 'https://example.com/images/doctor10.jpg',
+        bio: 'تتابع الحمل والولادة.',
+        consultationFee: 290,
+        followUpFee: 190,
+        isAvailable: 1,
+      },
+    ];
+
+    const doctors = [];
+    for (const doctorData of doctorsData) {
+      doctors.push(await createOrUpdateDoctor(doctorData));
+    }
+    console.log(`   ✅ Created/Updated ${doctors.length} doctors\n`);
+
+    // 4. Create Patients (sequentially)
+    console.log('4. Creating patients...');
+    
+    // Helper function to create or update patient
+    const createOrUpdatePatient = async (patientData: any) => {
+      const existing = await prisma.patient.findFirst({
+        where: {
+          OR: [
+            { email: patientData.email },
+            { phone: patientData.phone },
+          ],
+        },
+      });
+      
+      if (existing) {
+        return await prisma.patient.update({
+          where: { patientId: existing.patientId },
+          data: patientData,
+        });
+      } else {
+        return await prisma.patient.create({
+          data: patientData,
+        });
+      }
+    };
+
+    const patientsData = [
+      {
           name: 'أحمد إبراهيم',
           email: 'ahmed.ibrahim1@example.com',
           phone: '+201901112223',
@@ -282,11 +321,7 @@ async function main() {
           treatmentConsent: 1,
           disclosureConsent: 1,
         },
-      }),
-      await prisma.patient.upsert({
-        where: { email: 'mona.sami1@example.com' },
-        update: {},
-        create: {
+      {
           name: 'منى سامي',
           email: 'mona.sami1@example.com',
           phone: '+201022314455',
@@ -309,11 +344,7 @@ async function main() {
           treatmentConsent: 1,
           disclosureConsent: 1,
         },
-      }),
-      await prisma.patient.upsert({
-        where: { email: 'mohamed.ali1@example.com' },
-        update: {},
-        create: {
+      {
           name: 'محمد علي',
           email: 'mohamed.ali1@example.com',
           phone: '+201041556677',
@@ -336,11 +367,7 @@ async function main() {
           treatmentConsent: 1,
           disclosureConsent: 1,
         },
-      }),
-      await prisma.patient.upsert({
-        where: { email: 'nada.mostafa1@example.com' },
-        update: {},
-        create: {
+      {
           name: 'ندى مصطفى',
           email: 'nada.mostafa1@example.com',
           phone: '+201016778899',
@@ -363,11 +390,7 @@ async function main() {
           treatmentConsent: 1,
           disclosureConsent: 1,
         },
-      }),
-      await prisma.patient.upsert({
-        where: { email: 'khaled.yousef1@example.com' },
-        update: {},
-        create: {
+      {
           name: 'خالد يوسف',
           email: 'khaled.yousef1@example.com',
           phone: '+201018990011',
@@ -390,11 +413,7 @@ async function main() {
           treatmentConsent: 1,
           disclosureConsent: 1,
         },
-      }),
-      await prisma.patient.upsert({
-        where: { email: 'sara.ahmed1@example.com' },
-        update: {},
-        create: {
+      {
           name: 'سارة أحمد',
           email: 'sara.ahmed1@example.com',
           phone: '+201011213344',
@@ -417,11 +436,7 @@ async function main() {
           treatmentConsent: 1,
           disclosureConsent: 1,
         },
-      }),
-      await prisma.patient.upsert({
-        where: { email: 'yassin.mahmoud1@example.com' },
-        update: {},
-        create: {
+      {
           name: 'ياسين محمود',
           email: 'yassin.mahmoud1@example.com',
           phone: '+201013445566',
@@ -444,11 +459,7 @@ async function main() {
           treatmentConsent: 1,
           disclosureConsent: 1,
         },
-      }),
-      await prisma.patient.upsert({
-        where: { email: 'reem.abdulrahman1@example.com' },
-        update: {},
-        create: {
+      {
           name: 'ريم عبد الرحمن',
           email: 'reem.abdulrahman1@example.com',
           phone: '+201015667788',
@@ -471,11 +482,7 @@ async function main() {
           treatmentConsent: 1,
           disclosureConsent: 1,
         },
-      }),
-      await prisma.patient.upsert({
-        where: { email: 'tarek.hosny2@example.com' },
-        update: {},
-        create: {
+      {
           name: 'طارق حسني',
           email: 'tarek.hosny2@example.com',
           phone: '+201072889900',
@@ -498,11 +505,7 @@ async function main() {
           treatmentConsent: 1,
           disclosureConsent: 1,
         },
-      }),
-      await prisma.patient.upsert({
-        where: { email: 'hala.gamal2@example.com' },
-        update: {},
-        create: {
+      {
           name: 'هالة جمال',
           email: 'hala.gamal2@example.com',
           phone: '+201099021122',
@@ -525,12 +528,16 @@ async function main() {
           treatmentConsent: 1,
           disclosureConsent: 1,
         },
-      }),
     ];
-    console.log(`   ✅ Created ${patients.length} patients\n`);
 
-    // 4. Create Users
-    console.log('4. Creating users...');
+    const patients = [];
+    for (const patientData of patientsData) {
+      patients.push(await createOrUpdatePatient(patientData));
+    }
+    console.log(`   ✅ Created/Updated ${patients.length} patients\n`);
+
+    // 5. Create Users
+    console.log('5. Creating users...');
     const users = [
       await prisma.user.upsert({
         where: { email: 'superadmin@hospital.com' },
@@ -661,8 +668,8 @@ async function main() {
     ];
     console.log(`   ✅ Created ${users.length} users\n`);
 
-    // 5. Create Role Permissions
-    console.log('5. Creating role permissions...');
+    // 6. Create Role Permissions
+    console.log('6. Creating role permissions...');
     
     // Helper function to create role permission
     const createRolePermission = async (
@@ -696,17 +703,20 @@ async function main() {
           },
         });
       } else {
-        return await prisma.rolePermission.upsert({
+        // Check if exists first for field-based permissions
+        const existing = await prisma.rolePermission.findFirst({
           where: {
-            roleId_subject_action_fieldName: {
-              roleId,
-              subject,
-              action,
-              fieldName,
-            },
+            roleId,
+            subject,
+            action,
+            fieldName,
           },
-          update: {},
-          create: {
+        });
+        if (existing) {
+          return existing;
+        }
+        return await prisma.rolePermission.create({
+          data: {
             roleId,
             subject,
             action,
@@ -720,7 +730,8 @@ async function main() {
     const rolePermissions = [
       // SUPER_ADMIN
       await createRolePermission(211, 'ALL', 'MANAGE'),
-      // ADMIN
+      
+      // ADMIN (212)
       await createRolePermission(212, 'PATIENTS', 'CREATE'),
       await createRolePermission(212, 'PATIENTS', 'READ'),
       await createRolePermission(212, 'PATIENTS', 'UPDATE'),
@@ -734,17 +745,47 @@ async function main() {
       await createRolePermission(212, 'APPOINTMENTS', 'UPDATE'),
       await createRolePermission(212, 'APPOINTMENTS', 'DELETE'),
       await createRolePermission(212, 'DASHBOARD', 'READ'),
-      // DOCTOR
+      await createRolePermission(212, 'MEDICALRECORDS', 'CREATE'),
+      await createRolePermission(212, 'MEDICALRECORDS', 'READ'),
+      await createRolePermission(212, 'MEDICALRECORDS', 'UPDATE'),
+      await createRolePermission(212, 'MEDICALRECORDS', 'DELETE'),
+      await createRolePermission(212, 'INVOICES', 'CREATE'),
+      await createRolePermission(212, 'INVOICES', 'READ'),
+      await createRolePermission(212, 'INVOICES', 'UPDATE'),
+      await createRolePermission(212, 'INVOICES', 'DELETE'),
+      
+      // DOCTOR (213)
       await createRolePermission(213, 'PATIENTS', 'READ'),
       await createRolePermission(213, 'PATIENTS', 'UPDATE'),
       await createRolePermission(213, 'DOCTORS', 'READ'),
       await createRolePermission(213, 'APPOINTMENTS', 'READ'),
       await createRolePermission(213, 'APPOINTMENTS', 'UPDATE'),
-      // NURSE
+      await createRolePermission(213, 'APPOINTMENTS', 'CREATE'),
+      await createRolePermission(213, 'APPOINTMENTS', 'DELETE'),
+      await createRolePermission(213, 'MEDICALRECORDS', 'CREATE'),
+      await createRolePermission(213, 'MEDICALRECORDS', 'READ'),
+      await createRolePermission(213, 'MEDICALRECORDS', 'UPDATE'),
+      await createRolePermission(213, 'AVAILABILITY', 'MANAGE'),
+      await createRolePermission(213, 'SCHEDULE', 'READ'),
+      await createRolePermission(213, 'SCHEDULE', 'UPDATE'),
+      await createRolePermission(213, 'APPOINTMENT_SLOTS', 'READ'),
+      await createRolePermission(213, 'APPOINTMENT_SLOTS', 'UPDATE'),
+      await createRolePermission(213, 'INVOICES', 'READ'),
+      await createRolePermission(213, 'INVOICES', 'CREATE'),
+      await createRolePermission(213, 'INVOICES', 'UPDATE'),
+      
+      // NURSE (214)
       await createRolePermission(214, 'PATIENTS', 'READ'),
       await createRolePermission(214, 'DOCTORS', 'READ'),
       await createRolePermission(214, 'APPOINTMENTS', 'READ'),
-      // RECEPTIONIST
+      await createRolePermission(214, 'AVAILABILITY', 'MANAGE'),
+      await createRolePermission(214, 'SCHEDULE', 'READ'),
+      await createRolePermission(214, 'SCHEDULE', 'UPDATE'),
+      await createRolePermission(214, 'APPOINTMENT_SLOTS', 'READ'),
+      await createRolePermission(214, 'APPOINTMENT_SLOTS', 'UPDATE'),
+      await createRolePermission(214, 'INVOICES', 'READ'),
+      
+      // RECEPTIONIST (215)
       await createRolePermission(215, 'PATIENTS', 'CREATE'),
       await createRolePermission(215, 'PATIENTS', 'READ'),
       await createRolePermission(215, 'PATIENTS', 'UPDATE'),
@@ -753,22 +794,45 @@ async function main() {
       await createRolePermission(215, 'APPOINTMENTS', 'READ'),
       await createRolePermission(215, 'APPOINTMENTS', 'UPDATE'),
       await createRolePermission(215, 'APPOINTMENTS', 'DELETE'),
-      // PATIENT - General permissions
+      await createRolePermission(215, 'INVOICES', 'CREATE'),
+      await createRolePermission(215, 'INVOICES', 'READ'),
+      await createRolePermission(215, 'INVOICES', 'UPDATE'),
+      await createRolePermission(215, 'INVOICES', 'DELETE'),
+      
+      // PATIENT (216) - General permissions
       await createRolePermission(216, 'PATIENTS', 'READ'),
       await createRolePermission(216, 'PATIENTS', 'UPDATE'),
       await createRolePermission(216, 'APPOINTMENTS', 'READ'),
-      // PATIENT - Field permissions
-      await createRolePermission(216, 'DOCTORS', 'READ', 'full_name', 1),
-      await createRolePermission(216, 'DOCTORS', 'READ', 'specialization', 1),
-      await createRolePermission(216, 'DOCTORS', 'READ', 'phone', 1),
-      await createRolePermission(216, 'DOCTORS', 'READ', 'email', 0),
-      await createRolePermission(216, 'DOCTORS', 'READ', 'salary', 0),
-      await createRolePermission(216, 'DOCTORS', 'READ', 'private_notes', 0),
+      await createRolePermission(216, 'APPOINTMENTS', 'CREATE'),
+      await createRolePermission(216, 'APPOINTMENTS', 'CANCEL'),
+      await createRolePermission(216, 'AVAILABLE_SLOTS', 'READ'),
+      await createRolePermission(216, 'DOCTOR_SCHEDULE', 'READ'),
+      await createRolePermission(216, 'MEDICALRECORDS', 'READ'),
+      await createRolePermission(216, 'INVOICES', 'READ'),
+      
+      // PATIENT (216) - DOCTORS Field permissions
+      await createRolePermission(216, 'DOCTORS', 'READ', 'FULL_NAME', 1),
+      await createRolePermission(216, 'DOCTORS', 'READ', 'SPECIALTY', 1),
+      await createRolePermission(216, 'DOCTORS', 'READ', 'PHONE', 1),
+      await createRolePermission(216, 'DOCTORS', 'READ', 'EMAIL', 0),
+      await createRolePermission(216, 'DOCTORS', 'READ', 'SALARY', 0),
+      
+      // PATIENT (216) - INVOICES Field permissions
+      await createRolePermission(216, 'INVOICES', 'READ', 'patient_id', 1),
+      await createRolePermission(216, 'INVOICES', 'READ', 'invoice_number', 1),
+      await createRolePermission(216, 'INVOICES', 'READ', 'invoice_date', 1),
+      await createRolePermission(216, 'INVOICES', 'READ', 'amount', 1),
+      await createRolePermission(216, 'INVOICES', 'READ', 'total_amount', 1),
+      await createRolePermission(216, 'INVOICES', 'READ', 'paid_amount', 1),
+      await createRolePermission(216, 'INVOICES', 'READ', 'payment_status', 1),
+      await createRolePermission(216, 'INVOICES', 'READ', 'notes', 1),
+      await createRolePermission(216, 'INVOICES', 'READ', 'created_by', 0),
+      await createRolePermission(216, 'INVOICES', 'READ', 'created_at', 0),
     ];
     console.log(`   ✅ Created ${rolePermissions.length} role permissions\n`);
 
-    // 6. Create Appointments
-    console.log('6. Creating appointments...');
+    // 7. Create Appointments
+    console.log('7. Creating appointments...');
     const appointments = [
       await prisma.appointment.create({
         data: {
@@ -892,8 +956,8 @@ async function main() {
     ];
     console.log(`   ✅ Created ${appointments.length} appointments\n`);
 
-    // 7. Create Doctor Schedules
-    console.log('7. Creating doctor schedules...');
+    // 8. Create Doctor Schedules
+    console.log('8. Creating doctor schedules...');
     const schedules = [];
     // Doctor 1 (د. أحمد مصطفى) - Sunday to Thursday, 09:00-17:00
     for (let day = 1; day <= 5; day++) {
@@ -942,8 +1006,8 @@ async function main() {
     }
     console.log(`   ✅ Created ${schedules.length} doctor schedules\n`);
 
-    // 8. Create Medical Records
-    console.log('8. Creating medical records...');
+    // 9. Create Medical Records
+    console.log('9. Creating medical records...');
     const medicalRecords = [
       await prisma.medicalRecord.create({
         data: {
@@ -1108,61 +1172,73 @@ async function main() {
     ];
     console.log(`   ✅ Created ${medicalRecords.length} medical records\n`);
 
-    // 9. Create Invoices
-    console.log('9. Creating invoices...');
-    // invoiceNumber will be auto-generated by database trigger
+    // 10. Create Invoices
+    console.log('10. Creating invoices...');
+    const baseTimestamp = Date.now();
     const invoices = [
       await prisma.invoice.create({
         data: {
           patientId: patients[0].patientId, // أحمد إبراهيم
-          appointmentId: appointments[0].appointmentId, // 501
+          appointmentId: appointments[0].appointmentId,
+          invoiceNumber: `INV-${baseTimestamp}-001`,
           amount: 500,
           discount: 50,
           totalAmount: 450,
           paidAmount: 450,
+          paymentStatus: 'paid',
           paymentMethod: 'Cash',
+          paymentDate: new Date(),
           notes: 'دفع كامل',
-          createdBy: users[1].userId, // 201 - tah@gmail.com
-        } as any, // Type assertion to bypass Prisma Client type check
+          createdBy: users[1].userId, // tah@gmail.com
+        },
       }),
       await prisma.invoice.create({
         data: {
           patientId: patients[1].patientId, // منى سامي
-          appointmentId: appointments[1].appointmentId, // 502
+          appointmentId: appointments[1].appointmentId,
+          invoiceNumber: `INV-${baseTimestamp + 1}-002`,
           amount: 1000,
           discount: 100,
           totalAmount: 900,
           paidAmount: 500,
+          paymentStatus: 'partial',
           paymentMethod: 'Credit Card',
+          paymentDate: new Date(),
           notes: 'دفع جزئي',
-          createdBy: users[1].userId, // 201
-        } as any, // Type assertion to bypass Prisma Client type check
+          createdBy: users[1].userId,
+        },
       }),
       await prisma.invoice.create({
         data: {
           patientId: patients[2].patientId, // محمد علي
-          appointmentId: appointments[2].appointmentId, // 503
+          appointmentId: appointments[2].appointmentId,
+          invoiceNumber: `INV-${baseTimestamp + 2}-003`,
           amount: 750,
           discount: 0,
           totalAmount: 750,
           paidAmount: 0,
+          paymentStatus: 'unpaid',
           paymentMethod: null,
+          paymentDate: null,
           notes: 'لم يتم الدفع بعد',
-          createdBy: users[2].userId, // 202 - admin@hospital.com
-        } as any, // Type assertion to bypass Prisma Client type check
+          createdBy: users[2].userId, // admin@hospital.com
+        },
       }),
       await prisma.invoice.create({
         data: {
           patientId: patients[3].patientId, // ندى مصطفى
-          appointmentId: appointments[3].appointmentId, // 504
+          appointmentId: appointments[3].appointmentId,
+          invoiceNumber: `INV-${baseTimestamp + 3}-004`,
           amount: 600,
           discount: 60,
           totalAmount: 540,
           paidAmount: 540,
+          paymentStatus: 'paid',
           paymentMethod: 'Bank Transfer',
+          paymentDate: new Date(),
           notes: 'دفع كامل',
-          createdBy: users[1].userId, // 201
-        } as any, // Type assertion to bypass Prisma Client type check
+          createdBy: users[1].userId,
+        },
       }),
     ];
     console.log(`   ✅ Created ${invoices.length} invoices\n`);
@@ -1170,6 +1246,9 @@ async function main() {
     console.log('✅ Database seed completed successfully!');
     console.log('\n📊 Summary:');
     console.log(`   - Roles: ${roles.length}`);
+    if (specialties.length > 0) {
+      console.log(`   - Specialties: ${specialties.length}`);
+    }
     console.log(`   - Doctors: ${doctors.length}`);
     console.log(`   - Patients: ${patients.length}`);
     console.log(`   - Users: ${users.length}`);

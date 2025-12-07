@@ -25,7 +25,7 @@ export async function GET(
       include: {
         role: {
           include: {
-            rolePermissions: true,
+            permissions: true,
           },
         },
       },
@@ -39,7 +39,7 @@ export async function GET(
     }
 
     const roleName = user.role?.name || '';
-    const rows: VwPermissionRow[] = (user.role?.rolePermissions || []).map(rp => ({
+    const rows: VwPermissionRow[] = (user.role?.permissions || []).map(rp => ({
       USER_ID: Number(user.userId),
       USERNAME: user.username,
       FULL_NAME: user.fullName,

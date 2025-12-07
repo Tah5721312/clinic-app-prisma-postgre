@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     const doctorId = searchParams.get('doctorId');
     const specialty = searchParams.get('specialty') || undefined;
     const identificationNumber = searchParams.get('identificationNumber') || undefined;
+    const name = searchParams.get('name') || undefined;
 
     // Get current user session
     const session = await auth();
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
       doctorId: finalDoctorId,
       specialty,
       identificationNumber,
+      name,
       patientId, // Add patientId filter
     });
     

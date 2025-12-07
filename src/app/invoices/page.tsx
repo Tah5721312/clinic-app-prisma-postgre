@@ -30,7 +30,6 @@ export default function InvoicesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [filters, setFilters] = useState<InvoiceFilters>({});
-  const [tempFilters, setTempFilters] = useState<InvoiceFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState('');
   const [selectedDoctor, setSelectedDoctor] = useState<number | null>(null);
@@ -40,12 +39,7 @@ export default function InvoicesPage() {
 
   // Fetch specialties and doctors
   const { data: specialties } = useSpecialties();
-  const { data: doctors } = useDoctors(selectedSpecialty || undefined);
-
-  // Fetch invoices on mount
-  useEffect(() => {
-    fetchInvoices({});
-  }, []);
+  const { data: doctors } = useDoctors({ specialty: selectedSpecialty || undefined });
 
   // Fetch invoices
   const fetchInvoices = async (filterParams?: InvoiceFilters) => {
@@ -64,8 +58,6 @@ export default function InvoicesPage() {
         queryParams.append('date_to', filterParams.date_to);
       if (filterParams?.doctor_id)
         queryParams.append('doctor_id', filterParams.doctor_id.toString());
-      if (filterParams?.specialty)
-        queryParams.append('specialty', filterParams.specialty);
 
       const response = await fetch(
         `${DOMAIN}/api/invoices?${queryParams.toString()}`
@@ -84,49 +76,25 @@ export default function InvoicesPage() {
     }
   };
 
-  // Apply filters function
-  const applyFilters = () => {
-    const finalFilters: InvoiceFilters = {
-      ...tempFilters,
-      payment_status: tempFilters.payment_status || undefined,
-      date_from: selectedDate || tempFilters.date_from || undefined,
-      doctor_id: selectedDoctor || tempFilters.doctor_id || undefined,
-      specialty: selectedSpecialty || undefined,
-    };
-    
-    // Add identification number if provided
-    if (identificationNumber && identificationNumber.trim()) {
-      // This will be handled in fetchInvoices
-      setFilters(finalFilters);
-      fetchInvoicesWithIdentification(finalFilters, identificationNumber.trim());
-    } else {
-      setFilters(finalFilters);
-      fetchInvoices(finalFilters);
-    }
-  };
-
-  // Fetch invoices with identification number
-  const fetchInvoicesWithIdentification = async (filterParams: InvoiceFilters, idNumber: string) => {
+  // Search by identification number
+  const searchByIdentificationNumber = async () => {
     try {
       setLoading(true);
       setError(null);
 
       const queryParams = new URLSearchParams();
-      if (idNumber) {
-        queryParams.append('identificationNumber', idNumber);
-      }
-      if (filterParams?.patient_id)
-        queryParams.append('patient_id', filterParams.patient_id.toString());
-      if (filterParams?.payment_status)
-        queryParams.append('payment_status', filterParams.payment_status);
-      if (filterParams?.date_from)
-        queryParams.append('date_from', filterParams.date_from);
-      if (filterParams?.date_to)
-        queryParams.append('date_to', filterParams.date_to);
-      if (filterParams?.doctor_id)
-        queryParams.append('doctor_id', filterParams.doctor_id.toString());
-      if (filterParams?.specialty)
-        queryParams.append('specialty', filterParams.specialty);
+      if (identificationNumber && identificationNumber.trim())
+        queryParams.append('identificationNumber', identificationNumber.trim());
+      
+      // Add other filters
+      if (filters.payment_status)
+        queryParams.append('payment_status', filters.payment_status);
+      if (filters.date_from)
+        queryParams.append('date_from', filters.date_from);
+      if (filters.date_to)
+        queryParams.append('date_to', filters.date_to);
+      if (filters.doctor_id)
+        queryParams.append('doctor_id', filters.doctor_id.toString());
 
       const response = await fetch(
         `${DOMAIN}/api/invoices?${queryParams.toString()}`
@@ -144,6 +112,18 @@ export default function InvoicesPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchInvoices(filters);
+  }, [filters]);
+
+  // Initialize selectedDate with today's date
+  useEffect(() => {
+    if (!selectedDate) {
+      const today = new Date().toISOString().split('T')[0];
+      setSelectedDate(today);
+    }
+  }, [selectedDate]);
 
 
   // Filter invoices based on search term
@@ -252,7 +232,7 @@ export default function InvoicesPage() {
     key: keyof InvoiceFilters,
     value: string | number | undefined
   ) => {
-    setTempFilters((prev: InvoiceFilters) => ({
+    setFilters((prev: InvoiceFilters) => ({
       ...prev,
       [key]: value || undefined,
     }));
@@ -261,7 +241,7 @@ export default function InvoicesPage() {
   const handleSpecialtyChange = (specialty: string) => {
     setSelectedSpecialty(specialty);
     setSelectedDoctor(null);
-    setTempFilters((prev: InvoiceFilters) => ({
+    setFilters((prev: InvoiceFilters) => ({
       ...prev,
       doctor_id: undefined,
     }));
@@ -269,7 +249,7 @@ export default function InvoicesPage() {
 
   const handleDoctorSelect = (doctorId: number | null) => {
     setSelectedDoctor(doctorId);
-    setTempFilters((prev: InvoiceFilters) => ({
+    setFilters((prev: InvoiceFilters) => ({
       ...prev,
       doctor_id: doctorId || undefined,
     }));
@@ -300,7 +280,6 @@ export default function InvoicesPage() {
 
   const clearFilters = () => {
     setFilters({});
-    setTempFilters({});
     setSearchTerm('');
     setSelectedSpecialty('');
     setSelectedDoctor(null);
@@ -318,15 +297,16 @@ export default function InvoicesPage() {
   };
 
   const handleNextDay = () => {
-    if (!selectedDate) return;
-    const nextDate = incrementDateByDays(selectedDate, 1);
+    const nextDate = incrementDateByDays(selectedDate || new Date().toISOString().split('T')[0], 1);
     setSelectedDate(nextDate);
+    setFilters(prev => ({ ...prev, date_from: nextDate }));
   };
 
   const handlePrevDay = () => {
-    if (!selectedDate) return;
-    const prevDate = incrementDateByDays(selectedDate, -1);
+    const base = selectedDate || new Date().toISOString().split('T')[0];
+    const prevDate = incrementDateByDays(base, -1);
     setSelectedDate(prevDate);
+    setFilters(prev => ({ ...prev, date_from: prevDate }));
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -335,15 +315,43 @@ export default function InvoicesPage() {
     setFilters(prev => ({ ...prev, date_from: date || undefined }));
   };
 
+  // Get today's date for minimum date
+  const today = new Date().toISOString().split('T')[0];
+  
   // Current date label for display
-  const currentDateLabel = selectedDate 
-    ? new Date(selectedDate).toLocaleDateString('ar-EG', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-      })
-    : 'اختر التاريخ';
+  const currentDateStr = selectedDate || today;
+  const currentDateLabel = new Date(currentDateStr).toLocaleDateString('ar-EG', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+  const canGoPrevDay = (incrementDateByDays(currentDateStr, -1) >= today);
 
+  const exportInvoices = () => {
+    // Simple CSV export
+    const csvContent = [
+      ['Invoice #', 'Patient', 'Date', 'Amount', 'Paid', 'Status', 'Doctor'],
+      ...filteredInvoices.map((invoice) => [
+        invoice.INVOICE_NUMBER,
+        invoice.PATIENT_NAME || '',
+        new Date(invoice.INVOICE_DATE).toLocaleDateString(),
+        invoice.TOTAL_AMOUNT.toString(),
+        invoice.PAID_AMOUNT.toString(),
+        invoice.PAYMENT_STATUS,
+        invoice.DOCTOR_NAME || '',
+      ]),
+    ]
+      .map((row) => row.join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invoices-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   if (showForm) {
     return (
@@ -382,6 +390,16 @@ export default function InvoicesPage() {
 
         <div className='flex flex-col sm:flex-row gap-2 sm:gap-3'>
           <Button
+            variant='outline'
+            onClick={exportInvoices}
+            className='flex items-center justify-center w-full sm:w-auto'
+            size='sm'
+          >
+            <Download className='h-4 w-4 mr-2' />
+            <span className='hidden sm:inline'>Export</span>
+            <span className='sm:hidden'>Export CSV</span>
+          </Button>
+          <Button
             variant='primary'
             onClick={handleCreateInvoice}
             className='flex items-center justify-center w-full sm:w-auto'
@@ -396,8 +414,8 @@ export default function InvoicesPage() {
 
       {/* Filters */}
       <div className='card p-3 sm:p-4 rounded-lg shadow'>
-        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4'>
-          {/* Search - Client-side filter */}
+        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4'>
+          {/* Search */}
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
               Search
@@ -414,67 +432,35 @@ export default function InvoicesPage() {
             </div>
           </div>
 
-          {/* Payment Status */}
+          {/* Identification Number */}
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Payment Status
+              الرقم القومى
             </label>
-            <select
-              value={tempFilters.payment_status || ''}
-              onChange={(e) =>
-                handleFilterChange(
-                  'payment_status',
-                  e.target.value || undefined
-                )
-              }
-              className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            >
-              <option value=''>All Statuses</option>
-              <option value='unpaid'>Unpaid</option>
-              <option value='partial'>Partial</option>
-              <option value='paid'>Paid</option>
-              <option value='cancelled'>Cancelled</option>
-            </select>
-          </div>
-
-          {/* Date From */}
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              From Date
-            </label>
-            <input
-              type='date'
-              value={selectedDate || ''}
-              onChange={handleDateChange}
-              className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            />
-            {selectedDate && (
-              <div className='mt-2 flex items-center justify-between gap-2'>
-                <button
-                  type='button'
-                  onClick={handlePrevDay}
-                  className='inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 text-sm'
-                  aria-label='اليوم السابق'
-                  title='اليوم السابق'
-                >
-                  <ChevronLeft className='w-4 h-4 mr-1' />
-                </button>
-
-                <span className='text-sm card-title text-center flex-1'>
-                  {currentDateLabel}
-                </span>
-
-                <button
-                  type='button'
-                  onClick={handleNextDay}
-                  className='inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 text-sm'
-                  aria-label='اليوم التالي'
-                  title='اليوم التالي'
-                >
-                  <ChevronRight className='w-4 h-4 ml-1' />
-                </button>
+            <div className='flex gap-2'>
+              <div className='relative flex-1'>
+                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
+                <input
+                  type='text'
+                  value={identificationNumber}
+                  onChange={(e) => setIdentificationNumber(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      searchByIdentificationNumber();
+                    }
+                  }}
+                  placeholder='الرقم القومى'
+                  className='pl-10 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                />
               </div>
-            )}
+              <button
+                onClick={searchByIdentificationNumber}
+                disabled={loading}
+                className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center'
+              >
+                <Search className='h-4 w-4' />
+              </button>
+            </div>
           </div>
 
           {/* Specialty Filter */}
@@ -578,38 +564,76 @@ export default function InvoicesPage() {
             </div>
           </div>
 
-          {/* Identification Number */}
+          {/* Payment Status */}
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-1'>
-              الرقم القومى
+              Payment Status
+            </label>
+            <select
+              value={filters.payment_status || ''}
+              onChange={(e) =>
+                handleFilterChange(
+                  'payment_status',
+                  e.target.value || undefined
+                )
+              }
+              className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+            >
+              <option value=''>All Statuses</option>
+              <option value='unpaid'>Unpaid</option>
+              <option value='partial'>Partial</option>
+              <option value='paid'>Paid</option>
+              <option value='cancelled'>Cancelled</option>
+            </select>
+          </div>
+
+          {/* Date From */}
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-1'>
+              From Date
             </label>
             <input
-              type='text'
-              value={identificationNumber}
-              onChange={(e) => setIdentificationNumber(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  applyFilters();
-                }
-              }}
-              placeholder='الرقم القومى'
+              type='date'
+              value={selectedDate || filters.date_from || ''}
+              onChange={handleDateChange}
+              min={today}
               className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
             />
+            <div className='mt-2 flex items-center justify-between gap-2'>
+              <button
+                type='button'
+                onClick={handlePrevDay}
+                disabled={!canGoPrevDay}
+                className={`inline-flex items-center px-3 py-1 border rounded-md text-sm ${
+                  canGoPrevDay
+                    ? 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                    : 'border-gray-200 text-gray-400 bg-gray-100 cursor-not-allowed'
+                }`}
+                aria-label='اليوم السابق'
+                title='اليوم السابق'
+              >
+                <ChevronLeft className='w-4 h-4 mr-1' />
+              </button>
+
+              <span className='text-sm card-title text-center flex-1'>
+                {currentDateLabel}
+              </span>
+
+              <button
+                type='button'
+                onClick={handleNextDay}
+                className='inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 text-sm'
+                aria-label='اليوم التالي'
+                title='اليوم التالي'
+              >
+                <ChevronRight className='w-4 h-4 ml-1' />
+              </button>
+            </div>
           </div>
         </div>
 
         <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-4'>
           <div className='flex flex-col sm:flex-row gap-2'>
-            <Button 
-              variant='primary' 
-              size='sm' 
-              onClick={applyFilters}
-              className='flex items-center justify-center w-full sm:w-auto'
-              disabled={loading}
-            >
-              <Filter className='h-4 w-4 mr-1' />
-              Apply Filters
-            </Button>
             <Button variant='outline' size='sm' onClick={clearFilters} className='w-full sm:w-auto'>
               Clear Filters
             </Button>
@@ -618,9 +642,8 @@ export default function InvoicesPage() {
               size='sm'
               onClick={() => fetchInvoices(filters)}
               className='flex items-center justify-center w-full sm:w-auto'
-              disabled={loading}
             >
-              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className='h-4 w-4 mr-1' />
               Refresh
             </Button>
           </div>

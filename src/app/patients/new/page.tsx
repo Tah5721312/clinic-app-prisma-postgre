@@ -23,7 +23,7 @@ export default function AddPatientPage() {
   
   // Fetch specialties and doctors
   const { data: specialties, loading: specialtiesLoading, error: specialtiesError } = useSpecialties();
-  const { data: doctors } = useDoctors(selectedSpecialty || undefined);
+  const { data: doctors } = useDoctors({ specialty: selectedSpecialty || undefined });
 
   const [formData, setFormData] = useState({
     name: '',

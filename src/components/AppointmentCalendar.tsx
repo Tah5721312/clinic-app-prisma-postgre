@@ -76,7 +76,7 @@ export default function AppointmentCalendar({ initialDoctorId: propsDoctorId, in
   // Fetch appointments with filters
   const { data: appointments, loading, error, refetch } = useAppointmentsWithFilters(filterParams);
 
-  const { data: doctors } = useDoctors(selectedSpecialty || undefined);
+  const { data: doctors } = useDoctors({ specialty: selectedSpecialty || undefined });
   const { data: specialties } = useSpecialties();
 
   // If doctor, automatically filter by their ID

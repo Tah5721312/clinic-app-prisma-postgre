@@ -50,7 +50,7 @@ export default function EnhancedAppointmentForm({
   const { data: doctors } = useDoctors({ specialty: selectedSpecialty || undefined });
   
   // Fetch all doctors when doctorId is provided to get the doctor's specialty
-  const { data: allDoctors } = useDoctors(undefined);
+  const { data: allDoctors } = useDoctors();
   
   // Custom dropdown states
   const [isDoctorDropdownOpen, setIsDoctorDropdownOpen] = useState(false);

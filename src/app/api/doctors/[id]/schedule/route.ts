@@ -61,6 +61,12 @@ export async function POST(request: NextRequest, { params }: Params) {
     const doctorId = Number(id);
     const body = await request.json();
 
+    const dayOfWeek = Number(body.day_of_week);
+    const startTime = (body.start_time || '').toString().trim();
+    const endTime = (body.end_time || '').toString().trim();
+    const slotDuration = body.slot_duration !== undefined ? Number(body.slot_duration) : 30;
+    const isAvailable = body.is_available !== undefined ? Number(body.is_available) : 1;
+
     if (isNaN(doctorId)) {
       return NextResponse.json(
         { error: 'Invalid doctor ID' },
@@ -89,7 +95,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Validate required fields
-    if (!body.day_of_week || !body.start_time || !body.end_time) {
+    if (!dayOfWeek || !startTime || !endTime) {
       return NextResponse.json(
         { error: 'Missing required fields: day_of_week, start_time, end_time' },
         { status: 400 }
@@ -97,7 +103,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Validate day of week
-    if (body.day_of_week < 1 || body.day_of_week > 7) {
+    if (dayOfWeek < 1 || dayOfWeek > 7) {
       return NextResponse.json(
         { error: 'Invalid day_of_week. Must be between 1-7' },
         { status: 400 }
@@ -106,7 +112,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     // Validate time format
     const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(body.start_time) || !timeRegex.test(body.end_time)) {
+    if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
       return NextResponse.json(
         { error: 'Invalid time format. Use HH:MM format' },
         { status: 400 }
@@ -114,20 +120,36 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Validate time order
-    if (body.start_time >= body.end_time) {
+    if (startTime >= endTime) {
       return NextResponse.json(
         { error: 'Start time must be before end time' },
         { status: 400 }
       );
     }
 
+    // Validate slot duration
+    if (!Number.isInteger(slotDuration) || slotDuration <= 0 || slotDuration > 480) {
+      return NextResponse.json(
+        { error: 'Invalid slot_duration. Must be an integer between 1-480 minutes' },
+        { status: 400 }
+      );
+    }
+
+    // Validate availability flag
+    if (![0, 1].includes(isAvailable)) {
+      return NextResponse.json(
+        { error: 'Invalid is_available. Must be 0 or 1' },
+        { status: 400 }
+      );
+    }
+
     const scheduleData = {
       doctor_id: doctorId,
-      day_of_week: body.day_of_week,
-      start_time: body.start_time,
-      end_time: body.end_time,
-      slot_duration: body.slot_duration || 30,
-      is_available: body.is_available !== undefined ? body.is_available : 1
+      day_of_week: dayOfWeek,
+      start_time: startTime,
+      end_time: endTime,
+      slot_duration: slotDuration,
+      is_available: isAvailable
     };
 
     const scheduleId = await createDoctorSchedule(scheduleData);
@@ -144,8 +166,9 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   } catch (error) {
     console.error('Error creating doctor schedule:', error);
+    const message = error instanceof Error ? error.message : 'Failed to create doctor schedule';
     return NextResponse.json(
-      { error: 'Failed to create doctor schedule' },
+      { error: message },
       { status: 500 }
     );
   }

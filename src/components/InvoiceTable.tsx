@@ -141,7 +141,7 @@ export default function InvoiceTable({
 
   if (invoices.length === 0) {
     return (
-      <div className='text-center py-12'>
+  <div className='text-center py-12'>
         <Receipt className='mx-auto h-12 w-12 text-gray-400' />
         <h3 className='mt-2 text-sm font-medium text-gray-900'>
           No invoices found
@@ -154,9 +154,9 @@ export default function InvoiceTable({
   }
 
   return (
-    <div className='space-y-4'>
+    <div className='space-y-2'>
       {/* Desktop Table */}
-      <div className='hidden lg:block overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg'>
+      <div className='hidden lg:block overflow-x-auto shadow ring-1 ring-black ring-opacity-5 rounded-lg'>
         <table className='min-w-full divide-y divide-gray-300'>
           <thead className='bg-gray-50'>
             <tr>
@@ -275,7 +275,7 @@ export default function InvoiceTable({
                         <option value='bank_transfer'>Transfer</option>
                         <option value='insurance'>Insurance</option>
                       </select>
-                      <div className='flex space-x-1'>
+                    <div className='flex gap-1'>
                         <button
                           onClick={() => handlePaymentSave(invoice.INVOICE_ID)}
                           className='text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600'
@@ -322,7 +322,7 @@ export default function InvoiceTable({
 
                 {showActions && (
                   <td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium'>
-                    <div className='flex items-center justify-end space-x-2'>
+                    <div className='flex items-center justify-end gap-2'>
                       {invoice.PAYMENT_STATUS !== 'paid' && (
                         <Button
                           variant='outline'

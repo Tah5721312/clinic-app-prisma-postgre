@@ -1319,8 +1319,8 @@ export async function createDoctorSchedule(scheduleData: CreateScheduleDto) {
       dayOfWeek: scheduleData.day_of_week,
       startTime: scheduleData.start_time,
       endTime: scheduleData.end_time,
-      slotDuration: scheduleData.slot_duration || 30,
-      isAvailable: scheduleData.is_available || 1,
+      slotDuration: scheduleData.slot_duration ?? 30,
+      isAvailable: scheduleData.is_available ?? 1,
     },
   });
 

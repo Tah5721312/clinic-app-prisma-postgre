@@ -1,9 +1,21 @@
 // app/api/patients/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllPatients, createPatient, getPatientIdByUserEmail } from '@/lib/db_utils';
+import { getAllPatients, createPatient, getPatientIdByUserEmail, getDoctorIdByUserEmail } from '@/lib/db_utils';
 import { auth } from '@/auth';
 import { logAuditEvent } from '@/lib/auditLogger';
 import { getClientIP } from '@/lib/rateLimit';
+import { prisma } from '@/lib/prisma';
+
+// Helper functions to convert BigInt to Number and vice versa
+function toNumber(id: bigint | number | null | undefined): number {
+  if (id === null || id === undefined) return 0;
+  return typeof id === 'bigint' ? Number(id) : id;
+}
+
+function toBigInt(id: number | bigint | null | undefined): bigint {
+  if (id === null || id === undefined) return BigInt(0);
+  return typeof id === 'number' ? BigInt(id) : id;
+}
 
 // GET - جلب جميع المرضى
 export async function GET(request: NextRequest) {
@@ -18,6 +30,24 @@ export async function GET(request: NextRequest) {
     const session = await auth();
     let finalDoctorId = doctorId ? Number(doctorId) : undefined;
     let patientId = undefined;
+    let filterByAppointments = false;
+
+    // If user is a doctor (role ID 213), get their doctor ID and filter by appointments
+    if (session?.user?.roleId === 213 && session?.user?.email) {
+      console.log('🔍 Doctor user detected:', session.user.email, 'Role ID:', session.user.roleId);
+      const userDoctorId = await getDoctorIdByUserEmail(session.user.email);
+      console.log('🔍 Doctor ID lookup result:', userDoctorId);
+      if (userDoctorId) {
+        finalDoctorId = userDoctorId;
+        filterByAppointments = true; // Filter patients by appointments with this doctor
+        console.log('🔍 Filtering patients by appointments with doctor ID:', finalDoctorId);
+      } else {
+        console.log('⚠️ No doctor record found for email:', session.user.email);
+        console.log('🔍 Returning empty array for doctor without record');
+        // If doctor user has no doctor record, return empty array
+        return NextResponse.json([]);
+      }
+    }
 
     // If user is a patient (role ID 216), filter patients to only show their own data
     if (session?.user?.roleId === 216 && session?.user?.email) {
@@ -25,8 +55,6 @@ export async function GET(request: NextRequest) {
       const userPatientId = await getPatientIdByUserEmail(session.user.email);
       console.log('🔍 Patient ID lookup result:', userPatientId);
       if (userPatientId) {
-        // For patients, we need to get their own patient record
-        // We'll modify the getAllPatients function to support filtering by patient ID
         patientId = userPatientId;
         console.log('🔍 Filtering by patient ID:', patientId);
       } else {
@@ -35,21 +63,123 @@ export async function GET(request: NextRequest) {
         // If patient user has no patient record, return empty array
         return NextResponse.json([]);
       }
-    } else {
-      console.log('🔍 User is not a patient. Role ID:', session?.user?.roleId, 'Email:', session?.user?.email);
     }
 
-    const patients = await getAllPatients({
-      doctorId: finalDoctorId,
-      specialty,
-      identificationNumber,
-      name,
-      patientId, // Add patientId filter
-    });
+    // If filtering by appointments, get patient IDs from appointments table first
+    let patientIdsFromAppointments: number[] | undefined = undefined;
+    if (filterByAppointments && finalDoctorId) {
+      console.log('🔍 Searching for appointments with doctorId:', finalDoctorId, 'as BigInt:', toBigInt(finalDoctorId));
+      const appointments = await prisma.appointment.findMany({
+        where: {
+          doctorId: toBigInt(finalDoctorId),
+        },
+        select: {
+          patientId: true,
+        },
+      });
+      
+      // Get unique patient IDs using Set
+      const uniquePatientIds = new Set(appointments.map(apt => toNumber(apt.patientId)));
+      patientIdsFromAppointments = Array.from(uniquePatientIds);
+      console.log('🔍 Found', patientIdsFromAppointments.length, 'unique patients with appointments for doctor ID:', finalDoctorId);
+      console.log('🔍 Patient IDs from appointments:', patientIdsFromAppointments);
+      
+      // If no appointments found, return empty array
+      if (patientIdsFromAppointments.length === 0) {
+        console.log('⚠️ No appointments found for doctor, returning empty array');
+        return NextResponse.json([]);
+      }
+    }
+
+    // Build the where clause for patient filtering
+    let patientIdFilter: number | number[] | undefined = undefined;
+    if (patientId) {
+      // For patient users, filter by their own patient ID
+      patientIdFilter = patientId;
+    } else if (filterByAppointments && patientIdsFromAppointments && patientIdsFromAppointments.length > 0) {
+      // For doctors, filter by patient IDs from appointments
+      patientIdFilter = patientIdsFromAppointments;
+    }
+
+    // If we have patient ID filter(s), use direct Prisma query for better performance
+    let patients;
+    if (patientIdFilter) {
+      const patientIdsArray = Array.isArray(patientIdFilter) ? patientIdFilter : [patientIdFilter];
+      console.log('🔍 Filtering patients by IDs:', patientIdsArray);
+      
+      const whereClause: any = {
+        patientId: {
+          in: patientIdsArray.map(id => toBigInt(id)),
+        },
+      };
+
+      // Add additional filters
+      if (identificationNumber && identificationNumber.trim()) {
+        whereClause.identificationNumber = { contains: identificationNumber, mode: 'insensitive' };
+      }
+      if (name && name.trim()) {
+        whereClause.name = { contains: name.trim(), mode: 'insensitive' };
+      }
+
+      const patientsData = await prisma.patient.findMany({
+        where: whereClause,
+        include: {
+          doctor: true,
+        },
+        orderBy: { name: 'asc' },
+      });
+
+      // Convert to expected format (matching getAllPatients format)
+      patients = patientsData.map(p => ({
+        PATIENT_ID: toNumber(p.patientId),
+        NAME: p.name,
+        EMAIL: p.email,
+        PHONE: p.phone,
+        DATEOFBIRTH: p.dateOfBirth,
+        GENDER: p.gender,
+        ADDRESS: p.address,
+        OCCUPATION: p.occupation,
+        EMERGENCYCONTACTNAME: p.emergencyContactName,
+        EMERGENCYCONTACTNUMBER: p.emergencyContactNumber,
+        PRIMARYPHYSICIAN: toNumber(p.primaryPhysician),
+        INSURANCEPROVIDER: p.insuranceProvider,
+        INSURANCEPOLICYNUMBER: p.insurancePolicyNumber,
+        ALLERGIES: p.allergies,
+        CURRENTMEDICATION: p.currentMedication,
+        FAMILYMEDICALHISTORY: p.familyMedicalHistory,
+        PASTMEDICALHISTORY: p.pastMedicalHistory,
+        IDENTIFICATIONTYPE: p.identificationType,
+        IDENTIFICATIONNUMBER: p.identificationNumber,
+        PRIVACYCONSENT: p.privacyConsent,
+        TREATMENTCONSENT: p.treatmentConsent,
+        DISCLOSURECONSENT: p.disclosureConsent,
+        PRIMARYPHYSICIANNAME: p.doctor?.name || null,
+        DOCTOR_NAME: p.doctor?.name || null,
+        DOCTOR_SPECIALTY: p.doctor?.specialty || null,
+      }));
+
+      // Filter by specialty if needed
+      if (specialty && specialty.trim()) {
+        patients = patients.filter(p => 
+          p.DOCTOR_SPECIALTY?.toLowerCase() === specialty.toLowerCase()
+        );
+      }
+    } else {
+      // Use getAllPatients for other cases
+      patients = await getAllPatients({
+        doctorId: finalDoctorId,
+        specialty,
+        identificationNumber,
+        name,
+        patientId: patientId,
+      });
+    }
     
     console.log('🔍 Retrieved patients count:', patients?.length || 0);
     if (session?.user?.roleId === 216) {
       console.log('🔍 Patient user should see only their own data. Filter applied:', !!patientId);
+    } else if (session?.user?.roleId === 213) {
+      console.log('🔍 Doctor user should see only patients with appointments. Filter applied:', filterByAppointments);
     }
     
     return NextResponse.json(patients);

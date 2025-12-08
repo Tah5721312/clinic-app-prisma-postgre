@@ -4,6 +4,8 @@ import {
   getAllInvoices,
   createInvoice,
   getMonthlyRevenue,
+  getPatientIdByUserEmail,
+  getDoctorIdByUserEmail,
 } from '@/lib/db_utils';
 import { auth } from '@/auth';
 import { logAuditEvent } from '@/lib/auditLogger';
@@ -24,19 +26,56 @@ export async function GET(request: NextRequest) {
 
     // Get current user session
     const session = await auth();
+    const currentUserId = (session?.user as any)?.id;
+    const userRole = (session?.user as any)?.roleId;
+    const isAdmin = (session?.user as any)?.isAdmin;
 
-    // If user is a patient (role ID 216), filter invoices to only show their own data
     let finalPatientId = patientId ? Number(patientId) : undefined;
-    if (session?.user?.roleId === 216 && session?.user?.email) {
-      // For patients, we need to get their patient ID from their email
-      // This would require a function to get patient ID by user email
-      // For now, we'll handle this in the frontend by passing the patient ID
-      console.log(
-        '🔍 Patient user detected:',
-        session.user.email,
-        'Role ID:',
-        session.user.roleId
-      );
+    let finalDoctorId = doctorId ? Number(doctorId) : undefined;
+
+    // إذا كان المستخدم مريض، احصل على patient_id من user email وتجاهل أي patientId في query params
+    if (userRole === 216 && currentUserId) {
+      const userEmail = (session?.user as any)?.email;
+      if (userEmail) {
+        try {
+          const userPatientId = await getPatientIdByUserEmail(userEmail);
+          if (userPatientId) {
+            // المريض يرى فقط فواتيره - تجاهل أي patientId في query params
+            finalPatientId = userPatientId;
+          } else {
+            // إذا لم يكن للمريض سجل، أرجع مصفوفة فارغة
+            return NextResponse.json([]);
+          }
+        } catch (error) {
+          console.error('Error getting patient ID:', error);
+          return NextResponse.json([]);
+        }
+      } else {
+        return NextResponse.json([]);
+      }
+    }
+
+    // إذا كان المستخدم دكتور، احصل على doctor_id من user email
+    // الدكتور يرى فواتير مرضاه فقط
+    if (userRole === 213 && currentUserId) {
+      const userEmail = (session?.user as any)?.email;
+      if (userEmail) {
+        try {
+          const userDoctorId = await getDoctorIdByUserEmail(userEmail);
+          if (userDoctorId) {
+            // الدكتور يرى فواتير مرضاه فقط
+            finalDoctorId = userDoctorId;
+          } else {
+            // إذا لم يكن للدكتور سجل، أرجع مصفوفة فارغة
+            return NextResponse.json([]);
+          }
+        } catch (error) {
+          console.error('Error getting doctor ID:', error);
+          return NextResponse.json([]);
+        }
+      } else {
+        return NextResponse.json([]);
+      }
     }
 
     // If requesting monthly revenue data
@@ -50,7 +89,7 @@ export async function GET(request: NextRequest) {
       payment_status: paymentStatus || undefined,
       date_from: dateFrom || undefined,
       date_to: dateTo || undefined,
-      doctor_id: doctorId ? Number(doctorId) : undefined,
+      doctor_id: finalDoctorId, // Use finalDoctorId instead of doctorId
       specialty: specialty || undefined,
       identificationNumber: identificationNumber || undefined,
     };

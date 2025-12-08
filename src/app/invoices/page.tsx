@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   Receipt,
   Plus,
@@ -12,6 +13,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Info,
 } from 'lucide-react';
 
 import { Invoice, InvoiceFilters, Doctor } from '@/lib/types';
@@ -24,6 +26,7 @@ import { useDoctors, useSpecialties } from '@/hooks/useApiData';
 
 export default function InvoicesPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +40,13 @@ export default function InvoicesPage() {
   const [selectedDate, setSelectedDate] = useState('');
   const [identificationNumber, setIdentificationNumber] = useState('');
 
-  // Fetch specialties and doctors
+  // Get user role and permissions
+  const userRole = (session?.user as any)?.roleId;
+  const isAdmin = (session?.user as any)?.isAdmin;
+  const isDoctor = userRole === 213;
+  const isPatient = userRole === 216;
+
+  // Fetch specialties and doctors (only if not patient or doctor)
   const { data: specialties } = useSpecialties();
   const { data: doctors } = useDoctors({ specialty: selectedSpecialty || undefined });
 
@@ -388,29 +397,56 @@ export default function InvoicesPage() {
           </div>
         </div>
 
-        <div className='flex flex-col sm:flex-row gap-2 sm:gap-3'>
-          <Button
-            variant='outline'
-            onClick={exportInvoices}
-            className='flex items-center justify-center w-full sm:w-auto'
-            size='sm'
-          >
-            <Download className='h-4 w-4 mr-2' />
-            <span className='hidden sm:inline'>Export</span>
-            <span className='sm:hidden'>Export CSV</span>
-          </Button>
-          <Button
-            variant='primary'
-            onClick={handleCreateInvoice}
-            className='flex items-center justify-center w-full sm:w-auto'
-            size='sm'
-          >
-            <Plus className='h-4 w-4 mr-2' />
-            <span className='hidden sm:inline'>New Invoice</span>
-            <span className='sm:hidden'>New</span>
-          </Button>
-        </div>
+        {!isPatient && (
+          <div className='flex flex-col sm:flex-row gap-2 sm:gap-3'>
+            <Button
+              variant='outline'
+              onClick={exportInvoices}
+              className='flex items-center justify-center w-full sm:w-auto'
+              size='sm'
+            >
+              <Download className='h-4 w-4 mr-2' />
+              <span className='hidden sm:inline'>Export</span>
+              <span className='sm:hidden'>Export CSV</span>
+            </Button>
+            <Button
+              variant='primary'
+              onClick={handleCreateInvoice}
+              className='flex items-center justify-center w-full sm:w-auto'
+              size='sm'
+            >
+              <Plus className='h-4 w-4 mr-2' />
+              <span className='hidden sm:inline'>New Invoice</span>
+              <span className='sm:hidden'>New</span>
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* Role-based info messages */}
+      {isPatient && (
+        <div className='bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg flex items-start gap-3'>
+          <Info className='h-5 w-5 mt-0.5 flex-shrink-0' />
+          <div>
+            <p className='font-medium'>أنت تشاهد فواتيرك الشخصية فقط</p>
+            <p className='text-sm text-blue-700 mt-1'>
+              You are viewing only your personal invoices
+            </p>
+          </div>
+        </div>
+      )}
+
+      {isDoctor && (
+        <div className='bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-start gap-3'>
+          <Info className='h-5 w-5 mt-0.5 flex-shrink-0' />
+          <div>
+            <p className='font-medium'>أنت تشاهد فواتير مواعيدك فقط</p>
+            <p className='text-sm text-green-700 mt-1'>
+              You are viewing only invoices for your appointments
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className='card p-3 sm:p-4 rounded-lg shadow'>
@@ -432,137 +468,143 @@ export default function InvoicesPage() {
             </div>
           </div>
 
-          {/* Identification Number */}
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              الرقم القومى
-            </label>
-            <div className='flex gap-2'>
-              <div className='relative flex-1'>
-                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
-                <input
-                  type='text'
-                  value={identificationNumber}
-                  onChange={(e) => setIdentificationNumber(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      searchByIdentificationNumber();
-                    }
-                  }}
-                  placeholder='الرقم القومى'
-                  className='pl-10 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                />
-              </div>
-              <button
-                onClick={searchByIdentificationNumber}
-                disabled={loading}
-                className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center'
-              >
-                <Search className='h-4 w-4' />
-              </button>
-            </div>
-          </div>
-
-          {/* Specialty Filter */}
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Specialty
-            </label>
-            <select
-              value={selectedSpecialty}
-              onChange={(e) => handleSpecialtyChange(e.target.value)}
-              className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            >
-              <option value=''>All Specialties</option>
-              {specialties?.map((specialty) => (
-                <option key={specialty} value={specialty}>
-                  {specialty}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Doctor Filter */}
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Doctor
-            </label>
-            <div className='relative'>
-              <button
-                type='button'
-                onClick={() => setIsDoctorDropdownOpen(!isDoctorDropdownOpen)}
-                className='card-title w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between'
-              >
-                <div className='flex items-center'>
-                  {selectedDoctor && doctors ? (
-                    (() => {
-                      const doctor = doctors.find(d => d.DOCTOR_ID === selectedDoctor);
-                      return doctor ? (
-                        <>
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${getAvatarColor(doctor.NAME)} shadow-sm mr-2`}>
-                            {doctor.IMAGE ? (
-                              <img 
-                                src={doctor.IMAGE} 
-                                alt={doctor.NAME}
-                                className="w-full h-full rounded-full object-cover"
-                              />
-                            ) : (
-                              getInitials(doctor.NAME)
-                            )}
-                          </div>
-                          <span className='truncate'>{doctor.NAME}</span>
-                        </>
-                      ) : (
-                        <span>Select Doctor</span>
-                      );
-                    })()
-                  ) : (
-                    <span>Select Doctor</span>
-                  )}
+          {/* Identification Number - Hidden for patients */}
+          {!isPatient && (
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
+                الرقم القومى
+              </label>
+              <div className='flex gap-2'>
+                <div className='relative flex-1'>
+                  <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
+                  <input
+                    type='text'
+                    value={identificationNumber}
+                    onChange={(e) => setIdentificationNumber(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        searchByIdentificationNumber();
+                      }
+                    }}
+                    placeholder='الرقم القومى'
+                    className='pl-10 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  />
                 </div>
-                <ChevronDown className='w-4 h-4' />
-              </button>
-              
-              {isDoctorDropdownOpen && (
-                <div className='absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto'>
-                  <button
-                    type='button'
-                    onClick={() => handleDoctorSelect(null)}
-                    className='w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center'
-                  >
-                    <div className='w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2'>
-                      <span className='text-xs card-title'>All</span>
-                    </div>
-                    <span className='font-medium card-title '>All Doctors</span>
-                  </button>
-                  {doctors?.map((doctor) => (
+                <button
+                  onClick={searchByIdentificationNumber}
+                  disabled={loading}
+                  className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center'
+                >
+                  <Search className='h-4 w-4' />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Specialty Filter - Hidden for patients and doctors */}
+          {!isPatient && !isDoctor && (
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
+                Specialty
+              </label>
+              <select
+                value={selectedSpecialty}
+                onChange={(e) => handleSpecialtyChange(e.target.value)}
+                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+              >
+                <option value=''>All Specialties</option>
+                {specialties?.map((specialty) => (
+                  <option key={specialty} value={specialty}>
+                    {specialty}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Doctor Filter - Hidden for patients and doctors */}
+          {!isPatient && !isDoctor && (
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
+                Doctor
+              </label>
+              <div className='relative'>
+                <button
+                  type='button'
+                  onClick={() => setIsDoctorDropdownOpen(!isDoctorDropdownOpen)}
+                  className='card-title w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between'
+                >
+                  <div className='flex items-center'>
+                    {selectedDoctor && doctors ? (
+                      (() => {
+                        const doctor = doctors.find(d => d.DOCTOR_ID === selectedDoctor);
+                        return doctor ? (
+                          <>
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${getAvatarColor(doctor.NAME)} shadow-sm mr-2`}>
+                              {doctor.IMAGE ? (
+                                <img 
+                                  src={doctor.IMAGE} 
+                                  alt={doctor.NAME}
+                                  className="w-full h-full rounded-full object-cover"
+                                />
+                              ) : (
+                                getInitials(doctor.NAME)
+                              )}
+                            </div>
+                            <span className='truncate'>{doctor.NAME}</span>
+                          </>
+                        ) : (
+                          <span>Select Doctor</span>
+                        );
+                      })()
+                    ) : (
+                      <span>Select Doctor</span>
+                    )}
+                  </div>
+                  <ChevronDown className='w-4 h-4' />
+                </button>
+                
+                {isDoctorDropdownOpen && (
+                  <div className='absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto'>
                     <button
-                      key={doctor.DOCTOR_ID}
                       type='button'
-                      onClick={() => handleDoctorSelect(doctor.DOCTOR_ID)}
+                      onClick={() => handleDoctorSelect(null)}
                       className='w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center'
                     >
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${getAvatarColor(doctor.NAME)} shadow-sm mr-2`}>
-                        {doctor.IMAGE ? (
-                          <img 
-                            src={doctor.IMAGE} 
-                            alt={doctor.NAME}
-                            className="w-full h-full rounded-full object-cover"
-                          />
-                        ) : (
-                          getInitials(doctor.NAME)
-                        )}
+                      <div className='w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-2'>
+                        <span className='text-xs card-title'>All</span>
                       </div>
-                      <div>
-                        <div className='font-medium card-title '>{doctor.NAME}</div>
-                        <div className='text-sm text-gray-500'>{doctor.SPECIALTY}</div>
-                      </div>
+                      <span className='font-medium card-title '>All Doctors</span>
                     </button>
-                  ))}
-                </div>
-              )}
+                    {doctors?.map((doctor) => (
+                      <button
+                        key={doctor.DOCTOR_ID}
+                        type='button'
+                        onClick={() => handleDoctorSelect(doctor.DOCTOR_ID)}
+                        className='w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center'
+                      >
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${getAvatarColor(doctor.NAME)} shadow-sm mr-2`}>
+                          {doctor.IMAGE ? (
+                            <img 
+                              src={doctor.IMAGE} 
+                              alt={doctor.NAME}
+                              className="w-full h-full rounded-full object-cover"
+                            />
+                          ) : (
+                            getInitials(doctor.NAME)
+                          )}
+                        </div>
+                        <div>
+                          <div className='font-medium card-title '>{doctor.NAME}</div>
+                          <div className='text-sm text-gray-500'>{doctor.SPECIALTY}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Payment Status */}
           <div>

@@ -1,10 +1,9 @@
 // app/api/medical-records/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllMedicalRecords, createMedicalRecord } from '@/lib/db_utils';
+import { getAllMedicalRecords, createMedicalRecord, getPatientIdByUserEmail, getDoctorIdByUserEmail } from '@/lib/db_utils';
 import { auth } from '@/auth';
 import { logAuditEvent } from '@/lib/auditLogger';
 import { getClientIP } from '@/lib/rateLimit';
-import { getPatientIdByUserEmail } from '@/lib/db_utils';
 
 // GET - جلب جميع السجلات الطبية
 export async function GET(request: NextRequest) {
@@ -19,14 +18,16 @@ export async function GET(request: NextRequest) {
     const isAdmin = (session?.user as any)?.isAdmin;
 
     let finalPatientId = patientId;
+    let finalDoctorId = doctorId;
 
-    // إذا كان المستخدم مريض، احصل على patient_id من user_id
+    // إذا كان المستخدم مريض، احصل على patient_id من user email وتجاهل أي patientId في query params
     if (userRole === 216 && currentUserId) {
       const userEmail = (session?.user as any)?.email;
       if (userEmail) {
         try {
           const userPatientId = await getPatientIdByUserEmail(userEmail);
           if (userPatientId) {
+            // المريض يرى فقط سجلاته - تجاهل أي patientId في query params
             finalPatientId = userPatientId;
           } else {
             // إذا لم يكن للمريض سجل، أرجع مصفوفة فارغة
@@ -41,10 +42,34 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // إذا كان المستخدم دكتور، احصل على doctor_id من user email
+    let doctorIdForFilter = undefined;
+    if (userRole === 213 && currentUserId) {
+      const userEmail = (session?.user as any)?.email;
+      if (userEmail) {
+        try {
+          const userDoctorId = await getDoctorIdByUserEmail(userEmail);
+          if (userDoctorId) {
+            doctorIdForFilter = userDoctorId;
+            // إذا كان هناك doctorId في query params، تجاهله لأن الدكتور يرى فقط سجلاته
+            finalDoctorId = undefined;
+          } else {
+            // إذا لم يكن للدكتور سجل، أرجع مصفوفة فارغة
+            return NextResponse.json([]);
+          }
+        } catch (error) {
+          console.error('Error getting doctor ID:', error);
+          return NextResponse.json([]);
+        }
+      } else {
+        return NextResponse.json([]);
+      }
+    }
+
     const records = await getAllMedicalRecords({
       patientId: finalPatientId,
-      doctorId,
-      currentUserId,
+      doctorId: finalDoctorId,
+      currentUserId: doctorIdForFilter || currentUserId, // Use doctorId for doctors
       userRole,
       isAdmin,
     });
@@ -79,8 +104,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // إذا كان المستخدم دكتور، استخدم ID الخاص به كـ doctor_id
-    const doctorId = userRole === 213 ? Number(userId) : Number(body.doctor_id);
+    // إذا كان المستخدم دكتور، احصل على doctor_id من user email
+    let doctorId: number;
+    if (userRole === 213) {
+      const userEmail = (session?.user as any)?.email;
+      if (userEmail) {
+        try {
+          const userDoctorId = await getDoctorIdByUserEmail(userEmail);
+          if (userDoctorId) {
+            doctorId = userDoctorId;
+          } else {
+            return NextResponse.json(
+              { error: 'Doctor record not found' },
+              { status: 404 }
+            );
+          }
+        } catch (error) {
+          console.error('Error getting doctor ID:', error);
+          return NextResponse.json(
+            { error: 'Failed to get doctor ID' },
+            { status: 500 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: 'User email not found' },
+          { status: 400 }
+        );
+      }
+    } else {
+      doctorId = Number(body.doctor_id);
+    }
 
     if (!body.patient_id) {
       return NextResponse.json(

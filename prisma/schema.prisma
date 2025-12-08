@@ -291,3 +291,6 @@ model AuditLog {
   @@index([action])
   @@map("audit_logs")
 }
+
+
+

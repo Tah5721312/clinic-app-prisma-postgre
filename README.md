@@ -1,133 +1,282 @@
-# Next.js + Tailwind CSS + TypeScript Starter and Boilerplate
+# نظام إدارة العيادة الطبية
 
-<div align="center">
-  <h2>🔋 ts-nextjs-tailwind-starter</h2>
-  <p>Next.js + Tailwind CSS + TypeScript starter packed with useful development features.</p>
-  <p>Made by <a href="https://theodorusclarence.com">Theodorus Clarence</a></p>
+🏥 **Medical Clinic Management System**
 
-[![GitHub Repo stars](https://img.shields.io/github/stars/theodorusclarence/ts-nextjs-tailwind-starter)](https://github.com/theodorusclarence/ts-nextjs-tailwind-starter/stargazers)
-[![Depfu](https://badges.depfu.com/badges/fc6e730632ab9dacaf7df478a08684a7/overview.svg)](https://depfu.com/github/theodorusclarence/ts-nextjs-tailwind-starter?project_id=30160)
-[![Last Update](https://img.shields.io/badge/deps%20update-every%20sunday-blue.svg)](https://shields.io/)
+نظام شامل لإدارة العيادات الطبية - إدارة المرضى، الأطباء، المواعيد، السجلات الطبية، والفواتير
 
-</div>
+**Comprehensive Medical Clinic Management System**
 
-## Features
+---
 
-This repository is 🔋 battery packed with:
+## نظرة عامة
 
-- ⚡️ Next.js 14 with App Router
-- ⚛️ React 18
-- ✨ TypeScript
-- 💨 Tailwind CSS 3 — Configured with CSS Variables to extend the **primary** color
-- 💎 Pre-built Components — Components that will **automatically adapt** with your brand color, [check here for the demo](https://tsnext-tw.thcl.dev/components)
-- 🃏 Jest — Configured for unit testing
-- 📈 Absolute Import and Path Alias — Import components using `@/` prefix
-- 📏 ESLint — Find and fix problems in your code, also will **auto sort** your imports
-- 💖 Prettier — Format your code consistently
-- 🐶 Husky & Lint Staged — Run scripts on your staged files before they are committed
-- 🤖 Conventional Commit Lint — Make sure you & your teammates follow conventional commit
-- ⏰ Release Please — Generate your changelog by activating the `release-please` workflow
-- 👷 Github Actions — Lint your code on PR
-- 🚘 Automatic Branch and Issue Autolink — Branch will be automatically created on issue **assign**, and auto linked on PR
-- 🔥 Snippets — A collection of useful snippets
-- 👀 Open Graph Helper Function — Awesome open graph generated using [og](https://github.com/theodorusclarence/og), fork it and deploy!
-- 🗺 Site Map — Automatically generate sitemap.xml
-- 📦 Expansion Pack — Easily install common libraries, additional components, and configs.
+نظام إدارة عيادة طبية شامل مبني باستخدام **Next.js 15** و **TypeScript** و **PostgreSQL**. يوفر النظام إدارة كاملة لجميع جوانب العيادة الطبية من إدارة المرضى والأطباء إلى المواعيد والسجلات الطبية والفواتير.
 
-See the 👉 [feature details and changelog](https://github.com/theodorusclarence/ts-nextjs-tailwind-starter/blob/main/CHANGELOG.md) 👈 for more.
+---
 
-You can also check all of the **details and demos** on my blog post:
+## المميزات الرئيسية
 
-- [One-stop Starter to Maximize Efficiency on Next.js & Tailwind CSS Projects](https://theodorusclarence.com/blog/one-stop-starter)
+### 🔐 نظام المصادقة والصلاحيات
 
-## Getting Started
+- نظام مصادقة متكامل باستخدام **NextAuth.js**
+- نظام صلاحيات مرن (RBAC) باستخدام **CASL**
+- أدوار متعددة: Super Admin, Admin, Doctor, Patient, Receptionist, Nurse
+- صلاحيات دقيقة على مستوى الحقول
 
-### 1. Clone this template using one of the three ways
+### 👥 إدارة المستخدمين
 
-1. Use this repository as template
+- إدارة شاملة للمرضى (CRUD)
+- إدارة الأطباء والتخصصات
+- إدارة المستخدمين والصلاحيات
+- ملفات شخصية للمستخدمين
 
-   **Disclosure:** by using this repository as a template, there will be an attribution on your repository.
+### 📅 إدارة المواعيد
 
-   I'll appreciate if you do, so this template can be known by others too 😄
+- جدولة المواعيد مع نظام الأوقات المتاحة
+- إدارة جداول الأطباء الأسبوعية
+- أنواع المواعيد: كشف عادي، متابعة، طوارئ
+- حالة المواعيد: معلق، مجدول، ملغي
+- تقويم تفاعلي لعرض المواعيد
 
-   ![Use as template](https://user-images.githubusercontent.com/55318172/129183039-1a61e68d-dd90-4548-9489-7b3ccbb35810.png)
+### 📋 السجلات الطبية
 
-2. Using `create-next-app`
+- إنشاء وإدارة السجلات الطبية
+- ربط السجلات بالمرضى والأطباء
+- تسجيل التشخيص، الأعراض، الأدوية، وخطة العلاج
+- تسجيل العلامات الحيوية (ضغط الدم، الحرارة، الطول، الوزن)
+- صلاحيات محددة: الأطباء يرون سجلاتهم فقط، المرضى يرون سجلاتهم فقط
 
-   ```bash
-   pnpm create next-app  -e https://github.com/theodorusclarence/ts-nextjs-tailwind-starter ts-pnpm
-   ```
+### 💰 إدارة الفواتير
 
-   If you still want to use **pages directory** (_is not actively maintained_) you can use this command
+- إنشاء وإدارة الفواتير
+- ربط الفواتير بالمواعيد
+- تتبع حالة الدفع (غير مدفوع، جزئي، مدفوع، ملغي)
+- حساب الخصومات والمبالغ المتبقية
+- تقارير الإيرادات (يومي، شهري، إجمالي)
 
-   ```bash
-   npx create-next-app -e https://github.com/theodorusclarence/ts-nextjs-tailwind-starter/tree/pages-directory project-name
-   ```
+### 📊 لوحة التحكم (Dashboard)
 
-3. Using `degit`
+- إحصائيات شاملة للعيادة
+- عدد المرضى، الأطباء، المواعيد
+- إحصائيات المواعيد (اليوم، الأسبوع، الشهر)
+- إحصائيات الإيرادات
+- حالة المواعيد (معلق، مجدول، ملغي)
+- عدد الأطباء المتاحين
 
-   ```bash
-   npx degit theodorusclarence/ts-nextjs-tailwind-starter YOUR_APP_NAME
-   ```
+### 🔍 البحث والفلترة
 
-4. Deploy to Vercel
+- بحث متقدم بالاسم في جميع الصفحات
+- فلترة حسب التخصص، الطبيب، المريض
+- بحث في المواعيد، المرضى، الأطباء
 
-   [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/git/external?repository-url=https%3A%2F%2Fgithub.com%2Ftheodorusclarence%2Fts-nextjs-tailwind-starter)
+---
 
-### 2. Install dependencies
+## التقنيات المستخدمة
 
-It is encouraged to use **pnpm** so the husky hooks can work properly.
+- ⚡️ **Next.js 15** - مع App Router
+- ⚛️ **React 18** - واجهة المستخدم
+- ✨ **TypeScript** - للكتابة الآمنة
+- 💨 **Tailwind CSS 3** - للتصميم
+- 🗄️ **PostgreSQL** - قاعدة البيانات
+- 🔧 **Prisma ORM** - إدارة قاعدة البيانات
+- 🔐 **NextAuth.js** - المصادقة
+- 🛡️ **CASL** - إدارة الصلاحيات
+- 🎨 **Lucide React** - الأيقونات
+- 📱 **Responsive Design** - تصميم متجاوب
+
+---
+
+## متطلبات التشغيل
+
+- **Node.js** 18+
+- **pnpm** (مفضل) أو npm
+- **PostgreSQL** 12+ أو قاعدة بيانات PostgreSQL مستضافة (مثل Neon, Supabase)
+
+---
+
+## التثبيت والتشغيل
+
+### 1. تثبيت المتطلبات
 
 ```bash
+# تثبيت الحزم
 pnpm install
 ```
 
-### 3. Run the development server
+### 2. إعداد متغيرات البيئة
 
-You can start the server using this command:
+قم بإنشاء ملف `.env` في المجلد الرئيسي:
 
-```bash
-pnpm dev
+```env
+# Database Configuration
+DATABASE_URL="postgresql://user:password@host:port/database?sslmode=require"
+
+# NextAuth Configuration
+NEXTAUTH_SECRET="your_secret_key_here"
+NEXTAUTH_URL="http://localhost:3000"
+
+# Application Domain
+NEXT_PUBLIC_DOMAIN="http://localhost:3000"
+
+# Admin Credentials (Optional)
+ADMIN_EMAIL="admin@example.com"
+ADMIN_PASSWORD="admin_password"
+
+# Guest Credentials (Optional)
+GUEST_EMAIL="guest@example.com"
+GUEST_PASSWORD="guest_password"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result. You can start editing the page by modifying `src/pages/index.tsx`.
+### 3. إعداد قاعدة البيانات
 
-### 4. Change defaults
+```bash
+# تشغيل migrations لإنشاء الجداول
+pnpm prisma migrate deploy
 
-There are some things you need to change including title, urls, favicons, etc.
+# (اختياري) ملء قاعدة البيانات ببيانات تجريبية
+pnpm prisma db seed
+```
 
-Find all comments with !STARTERCONF, then follow the guide.
+### 4. تشغيل المشروع
 
-Don't forget to change the package name in package.json
+```bash
+# وضع التطوير
+pnpm dev
 
-### 5. Commit Message Convention
+# بناء المشروع للإنتاج
+pnpm build
 
-This starter is using [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/), it is mandatory to use it to commit changes.
+# تشغيل الإنتاج
+pnpm start
+```
 
-## Projects using ts-nextjs-tailwind-starter
+افتح [http://localhost:3000](http://localhost:3000) في المتصفح.
 
-<!--
-TEMPLATE
-- [sitename](https://sitelink.com) ([Source](https://github.com/githublink))
-- [sitename](https://sitelink.com)
--->
+---
 
-- [theodorusclarence.com](https://theodorusclarence.com) ([Source](https://github.com/theodorusclarence/theodorusclarence.com))
-- [Notiolink](https://notiolink.thcl.dev/) ([Source](https://github.com/theodorusclarence/notiolink))
-- [NextJs + Materia UI + Typescript](https://github.com/AlexStack/nextjs-materia-mui-typescript-hook-form-scaffold-boilerplate-starter)
+## هيكل المشروع
 
-Are you using this starter? Please add your page (and repo) to the end of the list via a [Pull Request](https://github.com/theodorusclarence/ts-nextjs-tailwind-starter/edit/main/README.md). 😃
+```
+clinic-app-prisma-postgre/
+├── src/
+│   ├── app/                    # صفحات Next.js (App Router)
+│   │   ├── Dashboard/          # لوحة التحكم
+│   │   ├── patients/           # إدارة المرضى
+│   │   ├── doctors/            # إدارة الأطباء
+│   │   ├── appointments/       # إدارة المواعيد
+│   │   ├── medical-records/    # السجلات الطبية
+│   │   ├── invoices/           # إدارة الفواتير
+│   │   └── api/                # API Routes
+│   ├── components/             # المكونات المشتركة
+│   ├── lib/                    # المكتبات والمساعدات
+│   │   ├── prisma.ts           # Prisma Client
+│   │   ├── db_utils.ts         # دوال قاعدة البيانات
+│   │   ├── ability.ts          # تعريف الصلاحيات
+│   │   └── types.ts            # تعريفات TypeScript
+│   ├── hooks/                  # React Hooks
+│   └── contexts/               # React Contexts
+├── prisma/
+│   ├── schema.prisma           # Prisma Schema
+│   └── migrations/             # Database Migrations
+└── README.md                   # هذا الملف
+```
 
-## Expansion Pack 📦
+---
 
-This starter is now equipped with an [expansion pack](https://github.com/theodorusclarence/expansion-pack).
+## الأدوار والصلاحيات
 
-You can easily add expansion such as React Hook Form + Components, Storybook, and more just using a single command line.
+### Super Admin (211)
 
-<https://user-images.githubusercontent.com/55318172/146631994-e1cac137-1664-4cfe-950b-a96decc1eaa6.mp4>
+- جميع الصلاحيات على النظام
 
-Check out the [expansion pack repository](https://github.com/theodorusclarence/expansion-pack) for the commands
+### Admin (212)
 
-### App Router Update
+- إدارة المرضى، الأطباء، المواعيد
+- إدارة السجلات الطبية
+- إدارة الفواتير
+- عرض لوحة التحكم
 
-Due to App Router update, the expansion pack is currently **outdated**. It will be updated in the future. You can still use them by copy and pasting the files.
+### Doctor (213)
+
+- قراءة وتحديث بياناته
+- قراءة بيانات المرضى
+- إدارة المواعيد
+- إنشاء وإدارة السجلات الطبية الخاصة به
+- عرض لوحة التحكم
+
+### Patient (216)
+
+- قراءة وتحديث بياناته
+- قراءة سجلاته الطبية
+- إدارة مواعيده
+- عرض الفواتير الخاصة به
+
+### Receptionist (215)
+
+- إدارة المرضى
+- إدارة المواعيد
+- قراءة بيانات الأطباء
+
+### Nurse (214)
+
+- قراءة بيانات المرضى والأطباء
+- قراءة المواعيد
+
+---
+
+## الميزات الإضافية
+
+- 🌙 **Dark Mode** - وضع الظلام
+- 🔍 **Global Search** - بحث عام في النظام
+- 📱 **Responsive Design** - تصميم متجاوب لجميع الأجهزة
+- 🎨 **Modern UI** - واجهة مستخدم عصرية
+- ⚡️ **Performance Optimized** - محسّن للأداء
+- 🔒 **Secure** - آمن ومحمي
+- 📊 **Audit Logs** - سجلات المراجعة
+
+---
+
+## أوامر Prisma المفيدة
+
+```bash
+# عرض حالة migrations
+pnpm prisma migrate status
+
+# إنشاء migration جديد
+pnpm prisma migrate dev --name migration_name
+
+# تطبيق migrations على الإنتاج
+pnpm prisma migrate deploy
+
+# فتح Prisma Studio (واجهة قاعدة البيانات)
+pnpm prisma studio
+
+# إعادة توليد Prisma Client
+pnpm prisma generate
+```
+
+---
+
+## المساهمة
+
+نرحب بالمساهمات! يرجى فتح Issue أو Pull Request.
+
+---
+
+## الترخيص
+
+هذا المشروع مخصص للاستخدام الخاص.
+
+---
+
+## الدعم
+
+للحصول على الدعم، يرجى فتح Issue في المستودع.
+
+---
+
+## ملاحظات مهمة
+
+- تأكد من تحديث `DATABASE_URL` في ملف `.env` قبل التشغيل
+- استخدم `pnpm prisma migrate deploy` لتطبيق migrations على قاعدة البيانات
+- في حالة وجود مشاكل في الـ sequences، تأكد من تطبيق جميع migrations بشكل صحيح

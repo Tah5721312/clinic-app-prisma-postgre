@@ -118,14 +118,6 @@ NEXTAUTH_URL="http://localhost:3000"
 # Application Domain
 NEXT_PUBLIC_DOMAIN="http://localhost:3000"
 
-# Admin Credentials (Optional)
-ADMIN_EMAIL="admin@example.com"
-ADMIN_PASSWORD="admin_password"
-
-# Guest Credentials (Optional)
-GUEST_EMAIL="guest@example.com"
-GUEST_PASSWORD="guest_password"
-```
 
 ### 3. إعداد قاعدة البيانات
 
